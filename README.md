@@ -14,3 +14,9 @@
 ![1](https://github.com/Scienthusiasts/HeltonDetection/blob/dev1.0/demo/1.jpg)
 
 ![2](https://github.com/Scienthusiasts/HeltonDetection/blob/dev1.0/demo/2.jpg)
+
+**reference**
+[bubbliiiing/faster-rcnn-pytorch: 这是一个faster-rcnn的pytorch实现的库，可以利用voc数据集格式的数据进行训练。 (github.com)](https://github.com/bubbliiiing/faster-rcnn-pytorch)
+
+[open-mmlab/mmdetection: OpenMMLab Detection Toolbox and Benchmark (github.com)](https://github.com/open-mmlab/mmdetection)
+
