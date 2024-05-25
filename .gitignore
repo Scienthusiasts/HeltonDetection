@@ -1,0 +1,8 @@
+.vscode/
+__pycache__/
+log/
+ckpt/
+samples/
+debug.txt
+plot_dataset.jpg
+run.sh
