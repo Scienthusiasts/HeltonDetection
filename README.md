@@ -7,6 +7,6 @@ Learn to build an Object Detection framwork from scratch (based on Pytorch)
 
 **demo**
 
-![1](https://github.com/Scienthusiasts/HeltonDetection/blob/main/demo/1.png)
+![1](https://github.com/Scienthusiasts/HeltonDetection/blob/dev1.0/demo/1.jpg)
 
-![2](https://github.com/Scienthusiasts/HeltonDetection/blob/main/demo/2.png)
+![2](https://github.com/Scienthusiasts/HeltonDetection/blob/dev1.0/demo/2.jpg)
