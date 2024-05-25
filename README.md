@@ -1,7 +1,7 @@
 # HeltonDetection
 Learn to build an Object Detection framwork from scratch (based on Pytorch)
 
-The codes will be released soon, stay tuned!
+dev1.0 branch has been released !
 
 **demo**
 
