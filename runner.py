@@ -203,8 +203,10 @@ class Runner():
         # 退而求其次, 用判断条件动态的导入
         if dataset_type == 'FasterRCNNDataset':
             from datasets.FasterRCNNDataset import COCODataset
-        if dataset_type == 'YOLODataset':
-            from datasets.YOLODataset import COCODataset
+        if dataset_type == 'YOLOv5Dataset':
+            from datasets.YOLOv5Dataset import COCODataset
+        if dataset_type == 'YOLOv8Dataset':
+            from datasets.YOLOv8Dataset import COCODataset
         if dataset_type == 'WSDDNDataset':
             from datasets.WSDDNDataset import COCODataset
 
@@ -456,14 +458,14 @@ class Runner():
 
 
 
-    def evaler(self, epoch, inferring=True, pred_json_name='eval_tmp.json', ckpt_path=None, T=0.01):
+    def evaler(self, epoch, inferring=True, pred_json_name='eval_tmp.json', ckpt_path=None, T=0.01, fuse=False):
         '''一个epoch的验证(验证集)
         '''
         if (epoch % self.eval_interval == 0 and (epoch!=0 or self.eval_interval==1)) or self.mode=='eval':
             '''在验证集上评估并计算AP'''
             # self.valEpoch(T, agnostic=False, vis_heatmap=False, save_vis_path=None, half=False)
             # 采用一张图一张图遍历的方式,并生成评估结果json文件
-            mAP, ap_50 = self.test.genPredJsonAndEval(self.val_json_path, self.val_img_dir, self.log_dir, pred_json_name, T=T, model=self.model, inferring=inferring, ckpt_path=ckpt_path, reverse_map=self.reverse_map)
+            mAP, ap_50 = self.test.genPredJsonAndEval(self.val_json_path, self.val_img_dir, self.log_dir, pred_json_name, T=T, model=self.model, inferring=inferring, ckpt_path=ckpt_path, reverse_map=self.reverse_map, fuse=fuse)
             '''记录变量'''
             self.recoardArgs('epoch', mAP=mAP, ap_50=ap_50)
             if self.mode == 'eval':            

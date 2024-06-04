@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import timm
 from torchvision import models
 
-from models.YOLO.YOLOBlocks import *
+from models.YOLOv5.YOLOBlocks import *
 from utils.util import *
 
 
@@ -69,7 +69,7 @@ class YOLOv5PAFPN(nn.Module):
 
 # for test only
 if __name__ == '__main__':
-    from models.YOLO.Backbone import *
+    from models.YOLOv5.Backbone import *
     '''基本配置: n s m l x'''
     phi = 's'
     depth_dict          = {'n':0.33, 's':0.33, 'm':0.67, 'l':1.00, 'x':1.33}

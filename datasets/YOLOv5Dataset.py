@@ -15,70 +15,7 @@ import matplotlib.pyplot as plt
 
 from utils.util import *
 from utils.YOLOAnchorUtils import *
-
-
-
-
-class Transform():
-    '''数据预处理/数据增强(基于albumentations库)
-       https://albumentations.ai/docs/api_reference/full_reference/
-    '''
-    def __init__(self, imgSize, box_format='coco'):
-        '''
-            - imgSize:    网络接受的输入图像尺寸
-            - box_format: 'yolo':norm(cxcywh), 'coco':xywh
-        '''
-        maxSize = max(imgSize[0], imgSize[1])
-        # 训练时增强
-        self.trainTF = A.Compose([
-                A.BBoxSafeRandomCrop(p=0.5),
-                # A.RandomSizedBBoxSafeCrop(800, 800, erosion_rate=0.0, interpolation=1, p=0.5),
-                # 随机翻转
-                A.HorizontalFlip(p=0.5),
-                # 参数：随机色调、饱和度、值变化
-                A.HueSaturationValue(hue_shift_limit=20, sat_shift_limit=30, val_shift_limit=20, always_apply=False, p=0.5),
-                # 随机对比度增强
-                A.CLAHE(p=0.1),
-                # 高斯噪声
-                A.GaussNoise(var_limit=(0.05, 0.09), p=0.4),     
-                # 随机转为灰度图
-                A.ToGray(p=0.01),
-                A.OneOf([
-                    # 使用随机大小的内核将运动模糊应用于输入图像
-                    A.MotionBlur(p=0.2),   
-                    # 中值滤波
-                    A.MedianBlur(blur_limit=3, p=0.1),    
-                    # 使用随机大小的内核模糊输入图像
-                    A.Blur(blur_limit=3, p=0.1),  
-                ], p=0.2),
-            ],
-            bbox_params=A.BboxParams(format=box_format, min_area=0, min_visibility=0.0, label_fields=['category_ids']),
-            )
-        # 基本数据预处理
-        self.normalTF = A.Compose([
-                # 最长边限制为imgSize
-                A.LongestMaxSize(max_size=maxSize),
-                # 较短的边做padding
-                A.PadIfNeeded(imgSize[0], imgSize[1], border_mode=cv2.BORDER_CONSTANT, value=[128,128,128]),
-                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-            ],
-            bbox_params=A.BboxParams(format=box_format, min_area=0, min_visibility=0.0, label_fields=['category_ids']),
-            )
-        # 测试时增强
-        self.testTF = A.Compose([
-                # 最长边限制为imgSize
-                A.LongestMaxSize(max_size=maxSize),
-                # 较短的边做padding
-                A.PadIfNeeded(imgSize[0], imgSize[1], border_mode=cv2.BORDER_CONSTANT, value=[128,128,128]),
-                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-            ])
-        # 测试时增强(不padding黑边)
-        self.testTFNoPad = A.Compose([
-                # 最长边限制为imgSize
-                A.LongestMaxSize(max_size=maxSize),
-                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-            ])
-
+from datasets.preprocess import Transform
 
 
 
@@ -265,6 +202,10 @@ class BaseDataset(Dataset):
 
 
 
+
+    
+
+
     # 设置Dataloader的种子
     # DataLoader中worker_init_fn参数使
     # 为每个 worker 设置了一个基于初始种子和 worker ID 的独特的随机种子, 这样每个 worker 将产生不同的随机数序列，从而有助于数据加载过程的随机性和多样性
@@ -293,7 +234,7 @@ class BaseDataset(Dataset):
 
 class COCODataset(BaseDataset):
 
-    def __init__(self, num_classes, anchors, anchors_mask, annPath, imgDir, inputShape=[800, 800], trainMode=True, map=None):
+    def __init__(self, num_classes, annPath, imgDir, inputShape=[800, 800], anchors=None, anchors_mask=None, trainMode=True, map=None):
         '''__init__() 为默认构造函数，传入数据集类别（训练或测试），以及数据集路径
 
         Args:
@@ -351,7 +292,7 @@ class COCODataset(BaseDataset):
         # len(y_true)=3(三个尺度特征), y_true[i] = (3, 20, 20, 85), (3, 40, 40, 85), (3, 80, 80, 85)
         y_true = YOLOv5BestRatioAssigner(boxes, anchors=np.array(self.anchors), input_shape=self.input_shape, anchors_mask=self.anchors_mask, bbox_attrs=5+self.num_classes)
         return image.transpose(2,0,1), boxes, y_true
-    
+
 
 
 
@@ -462,6 +403,7 @@ class YOLODataset(BaseDataset):
         boxes[:, [0, 2]] = boxes[:, [0, 2]] / image.shape[1]
         boxes[:, [1, 3]] = boxes[:, [1, 3]] / image.shape[0]
         boxes = np.concatenate((boxes, labels.reshape(-1, 1)), axis=1)
+        '''dataset中是否包含assign(一般是静态assign方法才直接在datasets中执行assign操作，否则都是在计算baatchLoss里执行)'''
         # len(y_true)=3(三个尺度特征), y_true[i] = (3, 20, 20, 85), (3, 40, 40, 85), (3, 80, 80, 85)
         y_true = YOLOv5BestRatioAssigner(boxes, anchors=np.array(self.anchors), input_shape=self.input_shape, anchors_mask=self.anchors_mask, bbox_attrs=5+self.num_classes)
         return image.transpose(2,0,1), boxes, y_true
@@ -569,7 +511,7 @@ def visBatch(dataLoader:DataLoader, showText=False):
         mean = np.array([0.485, 0.456, 0.406]) 
         # 标准差
         std = np.array([[0.229, 0.224, 0.225]]) 
-        plt.figure(figsize = (8,8))
+        plt.figure(figsize = (9,9))
         for idx, imgBoxLabel in enumerate(zip(images, boxes)):
             img, box = imgBoxLabel
             box = box.numpy()
@@ -579,14 +521,14 @@ def visBatch(dataLoader:DataLoader, showText=False):
             # cxcywh->xywh
             box[:, 0] -= box[:, 2] / 2
             box[:, 1] -= box[:, 3] / 2
-            ax = plt.subplot(4,4,idx+1)
+            ax = plt.subplot(5,5,idx+1)
             img = img.numpy().transpose((1,2,0))
             # 由于在数据预处理时我们对数据进行了标准归一化，可视化的时候需要将其还原
             img = np.clip(img * std + mean, 0, 1)
             for instBox in box:
                 x0, y0, w, h, cat_id = round(instBox[0]), round(instBox[1]), round(instBox[2]), round(instBox[3]), int(instBox[4])
                 # 显示框
-                ax.add_patch(plt.Rectangle((x0, y0), w, h, color='blue', fill=False, linewidth=1))
+                ax.add_patch(plt.Rectangle((x0, y0), w, h, color='blue', fill=False, linewidth=0.6))
                 # 显示类别
                 if showText:
                     ax.text(x0, y0, catName[cat_id], bbox={'facecolor':'white', 'alpha':0.5})
@@ -595,7 +537,7 @@ def visBatch(dataLoader:DataLoader, showText=False):
             # 取消坐标轴
             plt.axis("off")
              # 微调行间距
-            plt.subplots_adjust(left=0.05, bottom=0.05, right=0.95, top=0.95, wspace=0.05, hspace=0.05)
+            plt.subplots_adjust(left=0.01, bottom=0.01, right=0.99, top=0.99, wspace=0.01, hspace=0.01)
         plt.show()
 
 
@@ -616,9 +558,9 @@ def test_coco():
     seed = 23
     seed_everything(seed)
     # BatcchSize
-    BS = 16
+    BS = 25
     # 图像尺寸
-    imgSize = [1280, 1280]
+    imgSize = [1024, 1024]
     anchors = [[10, 13], [16, 30], [33, 23],
                 [30, 61], [62, 45], [59, 119],
                 [116, 90], [156, 198], [373, 326],
@@ -647,16 +589,24 @@ def test_coco():
     # cls_num = 10
     # map = None
     '''SODA-D'''
-    trainImgDir = "E:/datasets/Universal/SODA-D/Images/Images"
-    trainAnnPath = "E:/datasets/Universal/SODA-D/Annotations/train.json"
-    val_ann_dir = 'E:/datasets/Universal/SODA-D/Annotations/test.json'
-    val_img_dir = 'E:/datasets/Universal/SODA-D/Images/Images'
-    cls_num = 10
-    map = {1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6, 8:7, 9:8, 10:9}
+    # trainImgDir = "E:/datasets/Universal/SODA-D/Images/Images"
+    # trainAnnPath = "E:/datasets/Universal/SODA-D/Annotations/train.json"
+    # val_ann_dir = 'E:/datasets/Universal/SODA-D/Annotations/test.json'
+    # val_img_dir = 'E:/datasets/Universal/SODA-D/Images/Images'
+    # cls_num = 10
+    # map = {1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6, 8:7, 9:8, 10:9}
+    '''DOTA-v1.0'''
+    trainImgDir = "E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/train/images"
+    trainAnnPath = "E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/coco_ann/hbox_train.json"
+    cls_num = 15
+    map = None
+
+
+
 
 
     ''' 自定义数据集读取类'''
-    trainDataset = COCODataset(cls_num, anchors, anchors_mask, trainAnnPath, trainImgDir, imgSize, trainMode=True, map=map)
+    trainDataset = COCODataset(cls_num, trainAnnPath, trainImgDir, imgSize, anchors, anchors_mask, trainMode=True, map=map)
     trainDataLoader = DataLoader(trainDataset, shuffle=True, batch_size=BS, num_workers=0, pin_memory=True,
                                     collate_fn=trainDataset.dataset_collate, worker_init_fn=partial(trainDataset.worker_init_fn, seed=seed))
     # validDataset = COCODataset(valAnnPath, valImgDir, imgSize, trainMode=False, map=map)
@@ -687,13 +637,12 @@ def test_coco():
 
 
 
-
 def test_yolo():
     # 固定随机种子
     seed = 22
     seed_everything(seed)
     # BatcchSize
-    BS = 16
+    BS = 25
     # 图像尺寸
     imgSize = [640, 640]
     anchors = [[10, 13], [16, 30], [33, 23],

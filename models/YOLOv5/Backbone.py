@@ -4,7 +4,7 @@ import timm
 import numpy as np
 from torchvision import models
 
-from models.YOLO.YOLOBlocks import *
+from models.YOLOv5.YOLOBlocks import *
 
 '''
 huggingface里的timm模型:
@@ -103,7 +103,7 @@ class CSPDarknet(nn.Module):
                 param.requires_grad_(False)
 
         # 是否导入预训练权重
-        if loadckpt!=None: 
+        if loadckpt!=False: 
             self.load_state_dict(torch.load(loadckpt))
             print('yolov5 pretrain ckpt loaded!')
 

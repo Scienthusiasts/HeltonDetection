@@ -4,35 +4,6 @@ from torchvision.ops import nms
 from torch.nn import functional as F
 
 
-def genAnchor_multi(baseSizes=[4, 8, 16, 32, 64], ratios=[0.5, 1, 2], scales=[8]):
-    '''生成FasterRCNN基础的先验框(默认特征图每个grid有3个anchor, 1种尺度, 每个尺度三种形状)
-        Args:
-            - param baseSizes: 特征图一个像素代表原图几个像素(即下采样率, 600/38 ≈ 16), 一共5个尺度
-            - param ratios:   anchor的长宽比
-            - param scales:   anchor的尺度
-
-        Returns:
-            anchor: shape=[5, 3, 4], anchor的四个坐标是以输入原始图像的尺寸而言
-    '''
-    anchors = []
-    for baseSize in baseSizes:
-        anchor = np.zeros((len(ratios) * len(scales), 4), dtype=np.float32)
-        # 遍历不同尺度和形状的搭配,一共9个anchor
-        for i in range(len(ratios)):
-            for j in range(len(scales)):
-                # 根据ratio和scale生成anchor的高和宽
-                h = baseSize * scales[j] * np.sqrt(ratios[i])
-                w = baseSize * scales[j] * np.sqrt(1. / ratios[i])
-                # anchor的四个参数表示以当前特征图为原点, 左上角点(0, 1)和右下角点的坐标(2, 3)
-                idx = i * len(scales) + j
-                anchor[idx, 0] = - h / 2.
-                anchor[idx, 1] = - w / 2.
-                anchor[idx, 2] = h / 2.
-                anchor[idx, 3] = w / 2.
-        anchors.append(anchor)
-        # 格式xyxy
-    return np.array(anchors)
-
 
 
 
@@ -234,7 +205,7 @@ def reg2Bbox(anchor, reg):
     # 没有anchor
     if anchor.size()[0] == 0:
         return torch.zeros((0, 4), dtype=reg.dtype)
-    # anchor的格式xyxy->xywh
+    # anchor的格式xyxy->cxcywh
     anchorW  = torch.unsqueeze(anchor[:, 2] - anchor[:, 0], -1)
     anchorH  = torch.unsqueeze(anchor[:, 3] - anchor[:, 1], -1)
     anchorX  = torch.unsqueeze(anchor[:, 0], -1) + 0.5 * anchorW
@@ -244,13 +215,16 @@ def reg2Bbox(anchor, reg):
     dy = reg[:, [1]]
     dw = reg[:, [2]]
     dh = reg[:, [3]]
+    '''核心代码, FasterRCNN预测的结果如何解码为box'''
+    '''FasterRCNN是对网格的中心点和宽高做微调'''
     # anchor+offset->proposal
+    # FasterRCNN预测的dx, dy是中心点的偏移量; dw, dh是w, h的偏移量
     proposalX = dx * anchorW + anchorX
     proposalY = dy * anchorH + anchorY
     proposalW = torch.exp(dw) * anchorW
     proposalH = torch.exp(dh) * anchorH
 
-    # proposal的格式xywh->xyxy
+    # proposal的格式cxcywh->xyxy
     dst_bbox = torch.zeros_like(reg)
     dst_bbox[:, [0]] = proposalX - 0.5 * proposalW
     dst_bbox[:, [1]] = proposalY - 0.5 * proposalH
@@ -630,7 +604,7 @@ def ROIHeadMaxIoUAssignerNP(roi, bbox, label, regNormStd=(0.1, 0.1, 0.2, 0.2), m
        面向第二阶段
 
         Args:
-            - param roi:        RPN微调后的proposal
+            - param roi:        RPN微调后的proposal [600, 4]
             - param bbox:       GT box
             - param label:      roi的类别标签
             - param regNormStd: 用于回归offset归一化的标准差??
@@ -651,9 +625,9 @@ def ROIHeadMaxIoUAssignerNP(roi, bbox, label, regNormStd=(0.1, 0.1, 0.2, 0.2), m
     roi = np.concatenate((roi.detach().cpu().numpy(), bbox), axis=0)
 
     '''MaxIoUAssign(核心部分)'''
-    #   计算建议框和真实框的重合程度
-    iou = calcBoxIoU(roi, bbox)
     if len(bbox) > 0:
+        # 计算建议框和真实框的重合程度
+        iou = calcBoxIoU(roi, bbox)
         # 获得每一个建议框最对应的真实框的索引  [num_roi, ]
         gt_assignment = iou.argmax(axis=1)
         # 获得每一个建议框最对应的真实框的iou  [num_roi, ]

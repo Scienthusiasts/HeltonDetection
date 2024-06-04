@@ -22,8 +22,9 @@ from utils.FasterRCNNAnchorUtils import *
 
 class Test():
 
-    def __init__(self, path, model, img_size, class_names, device, half):
+    def __init__(self, path, model, img_size, class_names, device, half, tta):
         self.device = device
+        self.tta = tta
         self.half = half
         self.model = model
         # 半精度推理:
@@ -53,10 +54,14 @@ class Test():
         '''
         # 调用模型自己的推理方法
         if mode == 'image':
-            boxes, box_scores, box_classes = self.model.inferenceSingleImg(self.device, self.class_names, self.image2color, self.img_size, self.tf, path, save_vis_path, ckpt_path, T, agnostic, show_text, vis_heatmap, self.half)
+            boxes, box_scores, box_classes = inferenceSingleImg(
+                self.model, self.device, self.class_names, self.image2color, self.img_size, self.tf, path, save_vis_path, ckpt_path, T, agnostic, show_text, vis_heatmap, self.half, self.tta
+                )
             return boxes, box_scores, box_classes
         if mode == 'video':
-            self.model.inferenceVideo(self.device, self.class_names, self.image2color, self.img_size, self.tf, path, save_vis_path, ckpt_path, T, agnostic, show_text, self.half)
+            inferenceVideo(self.model, self.device, self.class_names, self.image2color, self.img_size, self.tf, path, save_vis_path, ckpt_path, T, agnostic, show_text, self.half)
+
+
 
 
 
@@ -96,7 +101,7 @@ class Test():
 
 
 
-    def genPredJsonAndEval(self, json_path, img_dir, log_dir, pred_json_name, T=0.01, agnostic=False, model=None, inferring=True, ckpt_path=None, reverse_map=None):
+    def genPredJsonAndEval(self, json_path, img_dir, log_dir, pred_json_name, T=0.01, agnostic=False, model=None, inferring=True, ckpt_path=None, reverse_map=None, fuse=False):
         '''将预测结果转为pred.json(COCO)的标注格式(但是只包含"annotations":[]里的内容), 且评估mAP
             Args:
                 - json_path:      数据集json文件路径
@@ -116,9 +121,13 @@ class Test():
         # 是否导入权重
         if ckpt_path != None:
             print(ckpt_path)
-            self.model.load_state_dict(torch.load(ckpt_path))
+            # self.model.load_state_dict(torch.load(ckpt_path))
+            self.model = loadWeightsBySizeMatching(self.model, ckpt_path)
             # 半精度推理(貌似还有问题,推理速度和全精度差不多):
             if self.half: self.model.half()
+            # yolov8:
+            if fuse:
+                self.model = self.model.fuse()
         self.model = model.eval()
         # faasterrcnn这里如果mode是train的话mAP会高一些，但是推理更慢(主要区别在于保留的框的数量不一样，train是600，val是300)
         '''是否在线推理, 在线推理则会在线生成一个eval的json文件(COCO anntations字段格式)'''

@@ -18,6 +18,10 @@ from loss.YOLOLoss import *
 
 
 
+
+
+
+
 def vis_YOLOv5_heatmap(predicts:torch.tensor, ori_shape, input_shape, image, box_classes, padding=True, save_vis_path=None):
     '''可視化 YOLOv5 obj_heatmap
         # Args:
@@ -87,6 +91,8 @@ def saveVisHeatMap(predict, image, W, H, layer, input_shape, cut_region, save_vi
         save_dir, save_name = os.path.split(save_vis_path)
         save_name = f'heatmap{layer}_' + save_name
         cv2.imwrite(os.path.join(save_dir, save_name), heatmap_img)
+
+
 
 
 
@@ -426,7 +432,7 @@ def inferDecodeBox(inputs, input_shape, num_classes, anchors, anchors_mask):
         # cls置信度
         pred_cls = torch.sigmoid(prediction[..., 5:])
         # 将offset作用到anchor上进行解码得到最终预测结果
-        pred_boxes = YOLOv5DecodeBox(batch_size, i, dx, dy, dh, dw, anchors_mask, scaled_anchors, input_height, input_width)
+        pred_boxes = YOLOv5Reg2Box(batch_size, i, dx, dy, dh, dw, anchors_mask, scaled_anchors, input_height, input_width)
 
         # 将输出结果转换成归一化坐标(0, 1)之间
         _scale = torch.Tensor([input_width, input_height, input_width, input_height]).type_as(dx)
@@ -437,7 +443,7 @@ def inferDecodeBox(inputs, input_shape, num_classes, anchors, anchors_mask):
 
 
 
-def YOLOv5DecodeBox(bs, l, dx, dy, dh, dw, anchors_mask, scaled_anchors, in_h, in_w):
+def YOLOv5Reg2Box(bs, l, dx, dy, dh, dw, anchors_mask, scaled_anchors, in_h, in_w):
     '''YOLOv5将offset作用到anchor上进行解码得到最终预测结果
     '''
     # 将预测结果进行解码，判断预测结果和真实值的重合程度
@@ -447,7 +453,7 @@ def YOLOv5DecodeBox(bs, l, dx, dy, dh, dw, anchors_mask, scaled_anchors, in_h, i
     grid_x = torch.linspace(0, in_w - 1, in_w).repeat(in_h, 1).repeat(int(bs * len(anchors_mask[l])), 1, 1).view(dx.shape).type_as(dx)
     grid_y = torch.linspace(0, in_h - 1, in_h).repeat(in_w, 1).t().repeat(int(bs * len(anchors_mask[l])), 1, 1).view(dy.shape).type_as(dx)
 
-    # 按照网格格式生成先验框的宽高(特征图尺寸下的绝对尺寸)
+    # 按照网格格式生成先验框的宽高(特征图尺寸下的绝对坐标)
     # anchor_w.shape, anchor_h.shape = [bs, 3, w, h]
     scaled_anchors_l = np.array(scaled_anchors)[anchors_mask[l]] # 只根据anchors_mask取出对应层的anchor
     anchor_w = torch.Tensor(scaled_anchors_l).index_select(1, torch.LongTensor([0])).type_as(dx)
@@ -456,11 +462,12 @@ def YOLOv5DecodeBox(bs, l, dx, dy, dh, dw, anchors_mask, scaled_anchors, in_h, i
     anchor_h = anchor_h.repeat(bs, 1).repeat(1, 1, in_h * in_w).view(dh.shape)
 
     '''很重要!! 这部分是YOLOv5将对offset作用到anchor上进行解码得到最终预测结果的核心代码'''
+    '''YOLOv5是对网格的左上角点和宽高做微调'''
     # NOTE:惨痛教训:这里不要写dx.data, 否则没有梯度, 导致训练时box_loss不收敛
-    dx = dx * 2. - 0.5 # 将dx范围调整成(-0.5, 1.5)
-    dy = dy * 2. - 0.5 # 将dy范围调整成(-0.5, 1.5)
-    dw = (dw * 2) ** 2 # 将dw范围调整成(0, 4)
-    dh = (dh * 2) ** 2 # 将dh范围调整成(0, 4)
+    dx = dx * 2. - 0.5 # 将dx范围调整成(-0.5, 1.5), 意味着anchor的中心点x可以调整的范围为相邻一个网格的单位
+    dy = dy * 2. - 0.5 # 将dy范围调整成(-0.5, 1.5), 意味着anchor的中心点y可以调整的范围为相邻一个网格的单位
+    dw = (dw * 2) ** 2 # 将dw范围调整成(0, 4), 意味着anchor的宽可以调整的范围为其本身的4倍以内
+    dh = (dh * 2) ** 2 # 将dh范围调整成(0, 4), 意味着anchor的高可以调整的范围为其本身的4倍以内
     pred_boxes = torch.zeros((bs, 3, in_w, in_h, 4), device=dx.device)
     pred_boxes[..., 0] = grid_x + dx
     pred_boxes[..., 1] = grid_y + dy

@@ -5,69 +5,14 @@ from PIL import Image
 from torch.utils.data.dataset import Dataset
 from torch.utils.data import DataLoader
 import random
-import albumentations as A
 from pycocotools.coco import COCO
 import os
-import cv2
 import json
 import matplotlib.pyplot as plt
 import torchvision.transforms as tf
 from tqdm import tqdm
 
-
-
-
-
-class Transform():
-    '''数据预处理/数据增强(基于albumentations库)
-       https://albumentations.ai/docs/api_reference/full_reference/
-    '''
-    def __init__(self, imgSize):
-        maxSize = max(imgSize[0], imgSize[1])
-        # 训练时增强
-        self.trainTF = A.Compose([
-                A.BBoxSafeRandomCrop(p=0.5),
-                # A.RandomSizedBBoxSafeCrop(800, 800, erosion_rate=0.0, interpolation=1, p=0.5),
-                # 随机翻转
-                A.HorizontalFlip(p=0.5),
-                # 参数：随机色调、饱和度、值变化
-                A.HueSaturationValue(hue_shift_limit=20, sat_shift_limit=30, val_shift_limit=20, always_apply=False, p=0.5),
-                # 随机对比度增强
-                A.CLAHE(p=0.1),
-                # 高斯噪声
-                A.GaussNoise(var_limit=(0.05, 0.09), p=0.4),     
-                # 随机转为灰度图
-                A.ToGray(p=0.05),
-                A.OneOf([
-                    # 使用随机大小的内核将运动模糊应用于输入图像
-                    A.MotionBlur(p=0.2),   
-                    # 中值滤波
-                    A.MedianBlur(blur_limit=3, p=0.1),    
-                    # 使用随机大小的内核模糊输入图像
-                    A.Blur(blur_limit=3, p=0.1),  
-                ], p=0.2),
-            ],
-            bbox_params=A.BboxParams(format='coco', min_area=0, min_visibility=0.0, label_fields=['category_ids']),
-            )
-        # 基本数据预处理
-        self.normalTF = A.Compose([
-                # 最长边限制为imgSize
-                A.LongestMaxSize(max_size=maxSize),
-                # 较短的边做padding
-                A.PadIfNeeded(imgSize[0], imgSize[1], border_mode=0, mask_value=[0,0,0]),
-                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-            ],
-            bbox_params=A.BboxParams(format='coco', min_area=0, min_visibility=0.0, label_fields=['category_ids']),
-            )
-        # 测试时增强
-        self.testTF = A.Compose([
-                # 最长边限制为imgSize
-                A.LongestMaxSize(max_size=maxSize),
-                # 较短的边做padding
-                A.PadIfNeeded(imgSize[0], imgSize[1], border_mode=0, mask_value=[0,0,0]),
-                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-            ])
-
+from datasets.preprocess import Transform
 
 
 
@@ -95,7 +40,7 @@ class COCODataset(Dataset):
             FRCNNDataset
         '''      
         self.mode = trainMode
-        self.tf = Transform(imgSize=inputShape)
+        self.tf = Transform(imgSize=inputShape, box_format='coco')
         self.imgDir = imgDir
         self.annPath = annPath
         # 为实例注释初始化COCO的API

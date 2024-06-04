@@ -1,24 +1,29 @@
 # train eval test
-MODE = 'eval'
+MODE = 'test'
 # mobilenetv3_large_100.ra_in1k  resnet50.a1_in1k  darknetaa53.c2ns_in1k cspdarknet53.ra_in1k cspresnext50.ra_in1k
-BACKBONE = 'resnet50.a1_in1k'
 FROZEBACKBONE = True
-# log/fasterrcnn/pafpn_decoupledhead_VOC_mosaic_0.5/best_mAP.pt
-TESTCKPT = "log/fasterrcnn/pafpn_decoupledhead_COCO_mosaic_0.5/best_AP50.pt"
-MINSCALE = 8
+# log_yolov5_VOC_mosaic_0.5_focalloss_obj_root_cls  log_yolov5_VOC_mosaic_0.5_focalloss_root_obj_root_cls_balance_4_1_0.4 
+# ./log/yolo/log_yolov5{PHI}_COCO_mosaic_0.5/best_mAP.pt /log/yolo/log_yolov5s_visDrone_mosaic_0.5_root_focalloss/best_mAP.pt
+PHI = 's'
+# 'last.pt' 
+# log/yolo/log_yolov5{PHI}_DOTAhv1.0_root_focalloss/best_mAP.pt
+# yolov5_s_v6.1.pth
+TESTCKPT = f"log/yolov5/log_yolov5{PHI}_COCO_mosaic_0.5/best_AP50.pt"
+BACKBONE = f'ckpt/cspdarknet_{PHI}_v6.1_backbone.pth'
+LOADCKPT = f"log/yolov5/log_yolov5{PHI}_COCO_mosaic_0.5/best_AP50.pt"
 RESUME = None
-LOADCKPT = "log/fasterrcnn/pafpn_decoupledhead_COCO_mosaic_0.5/best_AP50.pt"
-# [832, 832] [1024, 1024] [1280, 1280]1
-IMGSIZE = [832, 832]
+# [640, 640] [832, 832] [1024, 1024] [1280, 1280] [2048, 2048]
+IMGSIZE = [640, 640]
 TTA = [[640,640], [832,832], [960,960]]
 TTAOPEN = False
-ANCHORS = [[[90.5097, 181.0193], [128, 128], [181.0193, 90.5097]], [[181.0193, 362.0387], [256, 256], [362.0387, 181.0193]], [[362.0387, 724.0773], [512, 512], [724.0773, 362.0387]]]
-# ANCHORS = [[[90.5097/2, 181.0193/2], [128/2, 128/2], [181.0193/2, 90.5097/2]], [[181.0193/2, 362.0387/2], [256/2, 256/2], [362.0387/2, 181.0193/2]], [[362.0387/2, 724.0773/2], [512/2, 512/2], [724.0773/2, 362.0387/2]]]
-S = [8, 16, 32]
+MASK = [[0,1,2], [3,4,5], [6,7,8]] 
+ANCHORS = [[10, 13], [16, 30], [33, 23], [30, 61], [62, 45], [59, 119], [116, 90], [156, 198], [373, 326]] # COCO
+# ANCHORS = [[10, 14], [27, 19], [20, 36], [50, 30], [41, 64], [86, 51], [79, 120], [147, 87], [233, 194]]     # VisDrone
+# ANCHORS = [[18, 24], [38, 25], [34, 46], [68, 43], [46, 94], [94, 88], [175, 126], [150, 226], [402, 408]] # DOTA
 
 
 
-# VOC
+'''VOC'''
 # CATNUMS = 20
 # train_json_path = 'E:/datasets/Universal/VOC0712/VOC2007/Annotations/coco/train.json'
 # val_json_path =   'E:/datasets/Universal/VOC0712/VOC2007/Annotations/coco/test.json'
@@ -29,7 +34,7 @@ S = [8, 16, 32]
 # cat_map = None
 # reverse_map = None
 
-# COCO
+'''COCO'''
 CATNUMS = 80
 train_json_path = 'E:/datasets/Universal/COCO2017/COCO/annotations/instances_train2017.json'
 val_json_path =   'E:/datasets/Universal/COCO2017/COCO/annotations/instances_val2017.json'
@@ -51,15 +56,29 @@ reverse_map = {0:1, 1:2, 2:3, 3:4, 4:5, 5:6, 6:7, 7:8, 8:9, 9:10, 10:11, 11:13, 
        41:47, 42:48, 43:49, 44:50, 45:51, 46:52, 47:53, 48:54, 49:55, 50:56, 51:57, 52:58, 53:59, 54:60, 55:61, 56:62, 57:63, 58:64, 59:65, 
        60:67, 61:70, 62:72, 63:73, 64:74, 65:75, 66:76, 67:77, 68:78, 69:79, 70:80, 71:81, 72:82, 73:84, 74:85, 75:86, 76:87, 77:88, 78:89, 79:90}
 
-# visDrone2019
+'''visDrone2019'''
 # CATNUMS = 10
-# train_json_path = '/data/cs/yht/datasets/visdrone2019/annotations/train.json'
-# val_json_path =   '/data/cs/yht/datasets/visdrone2019/annotations/test.json'
-# train_img_dir =   '/data/cs/yht/datasets/visdrone2019/images/train/images'
-# val_img_dir   =   '/data/cs/yht/datasets/visdrone2019/images/test/images'
+# train_json_path = 'E:/datasets/RemoteSensing/visdrone2019/annotations/train.json'
+# val_json_path =   'E:/datasets/RemoteSensing/visdrone2019/annotations/test.json'
+# train_img_dir =   'E:/datasets/RemoteSensing/visdrone2019/images/train/images'
+# val_img_dir   =   'E:/datasets/RemoteSensing/visdrone2019/images/test/images'
 # cat_names = ["pedestrian", "people", "bicycle", "car", "van", "truck", "tricycle", "awning-tricycle", "bus", "motor"]
 # cat_map = None
 # reverse_map = None
+
+'''DOTA'''
+# CATNUMS = 15
+# train_json_path = 'E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/coco_ann/hbox_train.json'
+# val_json_path =   'E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/coco_ann/hbox_val.json'
+# train_img_dir =   'E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/train/images'
+# val_img_dir   =   'E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/val/images'
+# cat_names = ['PL', 'BD', 'BR', 'GTF', 'SV', 'LV', 'SH', 'TC', 'BC', 'ST', 'SBF', 'RA', 'HB', 'SP', 'HC']
+# cat_map = None
+# reverse_map = None
+
+
+
+
 
 
 runner = dict(
@@ -67,8 +86,8 @@ runner = dict(
     mode = MODE,
     resume = RESUME,
     img_size = IMGSIZE,
-    epoch = 12*3,
-    log_dir = './log/fasterrcnn',
+    epoch = 12*4,
+    log_dir = './log/yolo',
     log_interval = 1,
     eval_interval = 1,
     reverse_map = reverse_map,
@@ -76,13 +95,14 @@ runner = dict(
 
     dataset = dict(
         bs = 8,
-        num_workers = 2,
+        num_workers = 0,
         # 自定义的Dataset:
         my_dataset = dict(
-            path = 'datasets/FasterRCNNDataset.py',
+            path = 'datasets/YOLOv5Dataset.py',
             train_dataset = dict(
-                anchors = ANCHORS, 
-                featStride = S, 
+                anchors = ANCHORS,
+                anchors_mask = MASK, 
+                num_classes = CATNUMS,
                 annPath = train_json_path, 
                 imgDir = train_img_dir,
                 map = cat_map,
@@ -90,8 +110,9 @@ runner = dict(
                 trainMode=True, 
             ),
             val_dataset = dict(
-                anchors = ANCHORS, 
-                featStride = S, 
+                anchors = ANCHORS,
+                anchors_mask = MASK, 
+                num_classes = CATNUMS,
                 annPath = val_json_path, 
                 imgDir = val_img_dir,
                 map = cat_map,
@@ -102,36 +123,31 @@ runner = dict(
     ),
 
     model = dict(
-        path = 'models/FasterRCNN/FasterRCNN.py',
-        catNums = CATNUMS,
+        path = 'models/YOLOv5/YOLOv5.py',
+        img_size = IMGSIZE, 
+        anchors = ANCHORS,
+        anchors_mask = MASK, 
+        num_classes = CATNUMS, 
+        phi = PHI, 
+        loadckpt = LOADCKPT,           
         backbone_name = BACKBONE,
-        loadckpt = LOADCKPT,
         tta_img_size = TTA,
         backbone = dict(
-            modelType = BACKBONE,
-            loadckpt = None, #'ckpt/backbone_resnet50.a1_in1k.pt',
-            pretrain = False,
-            froze = FROZEBACKBONE,            
+            loadckpt=BACKBONE, 
+            pretrain=False, 
+            froze=FROZEBACKBONE,
         ),
-        rpn = dict(
-            img_size = IMGSIZE,
-            cat_nums = CATNUMS,
-            inChannels = 256,
-            midChannels = 256,
-            # FPN P2
-            anchors = ANCHORS,
-            featStride = S,
-            minScale = MINSCALE,
-            # FPN
-            # featStride=[4, 8, 16, 32, 64], 
-            # scales=[8], 
-            # ratios=[0.5, 1, 2],
-            mode = MODE,
-        ),
+        # backbone = dict(
+        #     modelType = 'cspdarknet53.ra_in1k',
+        #     loadckpt = './ckpt/cspdarknet53.ra_in1k.pt',
+        #     pretrain = False,
+        #     froze = FROZEBACKBONE,            
+        # ),
         head = dict(
-            catNums = CATNUMS,
-            roiSize = 7,
-        ),
+            cls_loss_type = "BCELoss", 
+            box_loss_type = "GIoULoss", 
+            obj_loss_type = "BCELoss",
+        )
     ),
     test = dict(
         # 是否半精度推理
@@ -140,7 +156,7 @@ runner = dict(
     ),
     optimizer = dict(
         optim_type = 'adamw',
-        lr = 2e-4,
+        lr = 1e-3,
         lr_min_ratio = 0.1,
         warmup_lr_init_ratio = 0.01,
     ),
@@ -156,19 +172,22 @@ eval = dict(
 test = dict(
     # image video
     mode = 'image',
-    # ./samples/imgs/3.jpg   
-    # "E:/datasets/Univer
+    # ./samples/imgs/12.jpg   
+    # "E:/datasets/RemoteSensing/visdrone2019/images/test/images/1.jpg"
     # sal/COCO2017/unlabeled2017/000000001234.jpg" 2382 2000 5611 1356 1800 1808 2548 
     # E:/datasets/RemoteSensing/visdrone2019/images/test/images/0000087_00009_d_0000001.jpg
-    path = "./samples/imgs/12.jpg",
+    # '''DOTA'''
+    # "E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/val/images/P0019__1024__4608___0.png" P0086__1024__0___0.png 
+    # P0168__1024__1024___512.png P0262__1024__512___0.png P0476__1024__122___205.png P0660__1024__136___0.png
+    # P0833__1024__617___0.png
+    path = "./samples/imgs/car1.jpg",
     save_vis_path = './samples/imgs/res1.jpg',
     # video
     # path = "./samples/videos/people_covered.mp4",
     # save_vis_path = './samples/videos/res1.mp4',
     ckpt_path = TESTCKPT,
-    T = 0.3,
-    agnostic = True,
+    T = 0.25,
+    agnostic = False,
     show_text = True,
-    # frcnn还没实现vis_heatmap:
-    vis_heatmap = False,
+    vis_heatmap = True,
 )

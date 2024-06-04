@@ -1,20 +1,19 @@
 # train eval test
-MODE = 'test'
+MODE = 'eval'
 # mobilenetv3_large_100.ra_in1k  resnet50.a1_in1k  darknetaa53.c2ns_in1k cspdarknet53.ra_in1k cspresnext50.ra_in1k
 FROZEBACKBONE = True
 # log_yolov5_VOC_mosaic_0.5_focalloss_obj_root_cls  log_yolov5_VOC_mosaic_0.5_focalloss_root_obj_root_cls_balance_4_1_0.4 
 # ./log/yolo/log_yolov5{PHI}_COCO_mosaic_0.5/best_mAP.pt /log/yolo/log_yolov5s_visDrone_mosaic_0.5_root_focalloss/best_mAP.pt
 PHI = 's'
-# 'last.pt' # 
-TESTCKPT = 'last.pt' # f"./log/yolo/log_yolov5{PHI}_COCO_mosaic_0.5/best_mAP.pt"
-BACKBONE = f'ckpt/cspdarknet_{PHI}_v6.1_backbone.pth'
-LOADCKPT = f"./log/yolo/log_yolov5{PHI}_COCO_mosaic_0.5/best_mAP.pt"
+# 'last.pt' 
+TESTCKPT = 'last.pt'
+BACKBONE = f'ckpt/yolov8_{PHI}_backbone_weights.pth'
+LOADCKPT = 'last.pt'
 RESUME = None
-# [832, 832] [1024, 1024] [640, 640] [1280, 1280] [2048, 2048]
+# [640, 640] [832, 832] [1024, 1024] [1280, 1280] [2048, 2048]
 IMGSIZE = [640, 640]
-MASK = [[0,1,2], [3,4,5], [6,7,8]] 
-ANCHORS = [[10, 13], [16, 30], [33, 23], [30, 61], [62, 45], [59, 119], [116, 90], [156, 198], [373, 326]] # COCO
-# ANCHORS = [[10, 14], [27, 19], [20, 36], [50, 30], [41, 64], [86, 51], [79, 120], [147, 87], [233, 194]]     # VisDrone
+TTA = [[640,640], [832,832], [960,960]]
+TTAOPEN = False
 
 '''VOC'''
 # CATNUMS = 20
@@ -59,6 +58,18 @@ reverse_map = {0:1, 1:2, 2:3, 3:4, 4:5, 5:6, 6:7, 7:8, 8:9, 9:10, 10:11, 11:13, 
 # cat_map = None
 # reverse_map = None
 
+'''DOTA'''
+# CATNUMS = 15
+# train_json_path = 'E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/coco_ann/hbox_train.json'
+# val_json_path =   'E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/coco_ann/hbox_val.json'
+# train_img_dir =   'E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/train/images'
+# val_img_dir   =   'E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/val/images'
+# cat_names = ['PL', 'BD', 'BR', 'GTF', 'SV', 'LV', 'SH', 'TC', 'BC', 'ST', 'SBF', 'RA', 'HB', 'SP', 'HC']
+# cat_map = None
+# reverse_map = None
+
+
+
 
 
 
@@ -67,8 +78,8 @@ runner = dict(
     mode = MODE,
     resume = RESUME,
     img_size = IMGSIZE,
-    epoch = 12*3,
-    log_dir = './log/yolo',
+    epoch = 12*4,
+    log_dir = './log/yolov8',
     log_interval = 1,
     eval_interval = 1,
     reverse_map = reverse_map,
@@ -79,10 +90,8 @@ runner = dict(
         num_workers = 0,
         # 自定义的Dataset:
         my_dataset = dict(
-            path = 'datasets/YOLODataset.py',
+            path = 'datasets/YOLOv8Dataset.py',
             train_dataset = dict(
-                anchors = ANCHORS,
-                anchors_mask = MASK, 
                 num_classes = CATNUMS,
                 annPath = train_json_path, 
                 imgDir = train_img_dir,
@@ -91,8 +100,6 @@ runner = dict(
                 trainMode=True, 
             ),
             val_dataset = dict(
-                anchors = ANCHORS,
-                anchors_mask = MASK, 
                 num_classes = CATNUMS,
                 annPath = val_json_path, 
                 imgDir = val_img_dir,
@@ -104,14 +111,13 @@ runner = dict(
     ),
 
     model = dict(
-        path = 'models/YOLO/YOLO.py',
-        img_size = IMGSIZE, 
-        anchors = ANCHORS,
-        anchors_mask = MASK, 
+        path = 'models/YOLOv8/YOLOv8.py',
         num_classes = CATNUMS, 
         phi = PHI, 
+        img_size = IMGSIZE,
         loadckpt = LOADCKPT,           
         backbone_name = BACKBONE,
+        tta_img_size = TTA,
         backbone = dict(
             loadckpt=BACKBONE, 
             pretrain=False, 
@@ -123,25 +129,22 @@ runner = dict(
         #     pretrain = False,
         #     froze = FROZEBACKBONE,            
         # ),
-        head = dict(
-            cls_loss_type = "BCELoss", 
-            box_loss_type = "GIoULoss", 
-            obj_loss_type = "BCELoss",
-        )
     ),
     test = dict(
         # 是否半精度推理
         half = False,
+        tta = TTAOPEN,
     ),
     optimizer = dict(
         optim_type = 'adamw',
-        lr = 2e-4,
+        lr = 1e-3,
         lr_min_ratio = 0.1,
         warmup_lr_init_ratio = 0.01,
     ),
 )
 
 eval = dict(
+    fuse = False,
     inferring = True,
     pred_json_name = 'eval_tmp.json',
     ckpt_path = TESTCKPT,
@@ -155,13 +158,17 @@ test = dict(
     # "E:/datasets/RemoteSensing/visdrone2019/images/test/images/1.jpg"
     # sal/COCO2017/unlabeled2017/000000001234.jpg" 2382 2000 5611 1356 1800 1808 2548 
     # E:/datasets/RemoteSensing/visdrone2019/images/test/images/0000087_00009_d_0000001.jpg
-    path = "./samples/imgs/6.jpg",
+    # '''DOTA'''
+    # "E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/val/images/P0019__1024__4608___0.png" P0086__1024__0___0.png 
+    # P0168__1024__1024___512.png P0262__1024__512___0.png P0476__1024__122___205.png P0660__1024__136___0.png
+    # P0833__1024__617___0.png
+    path = "./samples/imgs/cars.jpg",
     save_vis_path = './samples/imgs/res1.jpg',
     # video
-    # path = "./samples/videos/people_covered.mp4",
+    # path = "./samples/videos/cars.mp4",
     # save_vis_path = './samples/videos/res1.mp4',
     ckpt_path = TESTCKPT,
-    T = 0.25,
+    T = 0.20,
     agnostic = False,
     show_text = True,
     vis_heatmap = True,

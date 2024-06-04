@@ -85,7 +85,7 @@ class YOLOv5Head(nn.Module):
 
         # 将预测结果进行解码, 即将预测offset作用到anchors上
         # pred_boxes.shape = torch.Size([bs, 3, w, h, 4])
-        pred_boxes = YOLOv5DecodeBox(bs, self.l, x, y, h, w, self.anchors_mask, scaled_anchors, in_h, in_w)
+        pred_boxes = YOLOv5Reg2Box(bs, self.l, x, y, h, w, self.anchors_mask, scaled_anchors, in_h, in_w)
 
         y_true = y_true.type_as(x)
         

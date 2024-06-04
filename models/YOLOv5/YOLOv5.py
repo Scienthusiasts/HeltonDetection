@@ -3,10 +3,9 @@ from PIL import Image
 from collections import Counter
 import time
 
-from models.YOLO.Backbone import *
-from models.YOLO.PAFPN import *
-from models.YOLO.PAFPN import *
-from models.YOLO.Head import *
+from models.YOLOv5.Backbone import *
+from models.YOLOv5.PAFPN import *
+from models.YOLOv5.Head import *
 from utils.YOLOAnchorUtils import *
 
 
@@ -14,7 +13,7 @@ class Model(nn.Module):
     '''完整YOLOv5网络架构
     '''
 
-    def __init__(self, backbone_name, img_size, anchors, anchors_mask, num_classes, phi, loadckpt, backbone:dict, head:dict):
+    def __init__(self, backbone_name, img_size, anchors, anchors_mask, num_classes, phi, loadckpt, tta_img_size, backbone:dict, head:dict):
         super(Model, self).__init__()
         '''基本配置'''
         depth_dict          = {'n': 0.33, 's' : 0.33, 'm' : 0.67, 'l' : 1.00, 'x' : 1.33,}
@@ -34,27 +33,13 @@ class Model(nn.Module):
         self.p3_head = YOLOv5Head(0, self.num_classes, img_size, anchors, base_channels * 4 , anchors_mask, **head)
         self.p4_head = YOLOv5Head(1, self.num_classes, img_size, anchors, base_channels * 8 , anchors_mask, **head)
         self.p5_head = YOLOv5Head(2, self.num_classes, img_size, anchors, base_channels * 16, anchors_mask, **head)
-
+        '''TTA增强'''
+        self.tta = TTA(tta_img_size=tta_img_size)
         # 是否导入预训练权重
         if loadckpt!=None: 
             # self.load_state_dict(torch.load(loadckpt))
-            # print('yolov5 pretrain ckpt loaded!')
-
-            # 加快模型训练的效率
-            print('Loading weights into state dict by size matching...')
-            model_dict = self.state_dict()
-            pretrained_dict = torch.load(loadckpt)
-            a = {}
-            for (kk, vv), (k, v) in zip(pretrained_dict.items(), model_dict.items()):
-                try:    
-                    if np.shape(vv) ==  np.shape(v):
-                        # print(f'(previous){kk} -> (current){k}')
-                        a[k]=vv
-                except:
-                    print(f'(previous){kk} mismatch (current){k}')
-            model_dict.update(a)
-            self.load_state_dict(model_dict)
-            print('Finished!')
+            # 基于尺寸的匹配方式(能克服局部模块改名加载不了的问题)
+            self = loadWeightsBySizeMatching(self, loadckpt)
 
 
     def forward(self, x):
@@ -163,7 +148,7 @@ class Model(nn.Module):
 
 
 
-    def infer(self, image:np.array, img_size, tf, device, T, agnostic=False, vis_heatmap=False, save_vis_path=None, half=False):
+    def infer(self, image:np.array, img_size, tf, device, T, image2color=None, agnostic=False, vis_heatmap=False, save_vis_path=None, half=False, tta=False):
         '''推理一张图/一帧
             # Args:
                 - image:  读取的图像(nparray格式)
@@ -188,10 +173,10 @@ class Model(nn.Module):
             # torch.Size([1, 1200, 85])
             # torch.Size([1, 4800, 85])
             # torch.Size([1, 19200, 85])
-            decode_predicts = inferDecodeBox(predicts, self.img_size, self.num_classes, self.anchors, self.anchors_mask)
+            decode_predicts = inferDecodeBox(predicts, img_size, self.num_classes, self.anchors, self.anchors_mask)
             '''计算nms, 并将box坐标从归一化坐标转换为绝对坐标'''
             # torch.cat(decode_predicts, 1) : torch.Size([1, 25200, 85])
-            decode_predicts = non_max_suppression(torch.cat(decode_predicts, 1), self.img_size, conf_thres=T, nms_thres=0.3, agnostic=agnostic)
+            decode_predicts = non_max_suppression(torch.cat(decode_predicts, 1), img_size, conf_thres=T, nms_thres=0.3, agnostic=agnostic)
             # 图像里没预测出目标的情况:
             if len(decode_predicts) == 0 : return [],[],[]
             box_classes = np.array(decode_predicts[0][:, 6], dtype = 'int32')
@@ -211,139 +196,6 @@ class Model(nn.Module):
             if vis_heatmap:vis_YOLOv5_heatmap(predicts, [W, H], img_size, image, box_classes, save_vis_path=save_vis_path)
 
             return boxes, box_scores, box_classes
-
-            
-
-
-
-
-
-
-    def inferenceSingleImg(self, device, class_names, image2color, img_size, tf, img_path, save_vis_path=None, ckpt_path=None, T=0.3, agnostic=False, show_text=True, vis_heatmap=False, half=False):
-        '''推理一张图
-            # Args:
-                - device:        cpu/cuda
-                - class_names:   每个类别的名称, list
-                - image2color:   每个类别一个颜色
-                - img_size:      固定图像大小 如[832, 832]
-                - tf:            数据预处理(基于albumentation库)
-                - img_path:      图像路径
-                - save_vis_path: 可视化图像保存路径
-                - ckpt_path:     模型权重路径
-                - T:             可视化的IoU阈值
-
-            # Returns:
-                - boxes:       网络回归的box坐标    [obj_nums, 4]
-                - box_scores:  网络预测的box置信度  [obj_nums]
-                - box_classes: 网络预测的box类别    [obj_nums]
-        '''
-        if ckpt_path != None:
-            self.load_state_dict(torch.load(ckpt_path))
-            self.eval()
-
-        image = Image.open(img_path).convert('RGB')
-        # Image 转numpy
-        image = np.array(image)
-        '''推理一张图像'''
-        # xyxy
-        boxes, box_scores, box_classes = self.infer(np.array(image), img_size, tf, device, T, agnostic, vis_heatmap, save_vis_path, half=half)
-        #  检测出物体才继续    
-        if len(boxes) == 0: 
-            print(f'no objects in image: {img_path}.')
-            return boxes, box_scores, box_classes
-
-        '''画框'''
-        if save_vis_path!=None:
-            # PltDrawBox(image, boxes, box_classes, box_scores, save_vis_path, image2color, class_names)
-            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-            image = OpenCVDrawBox(image, boxes, box_classes, box_scores, save_vis_path, image2color, class_names, resize_size=[2000, 2000], show_text=show_text)
-            cv2.imwrite(save_vis_path, image)
-            # 统计检测出的类别和数量
-            detect_cls = dict(Counter(box_classes))
-            detect_name = {}
-            for key, val in detect_cls.items():
-                detect_name[class_names[key]] = val
-            print(f'detect result: {detect_name}')
-        return boxes, box_scores, box_classes
-
-
-
-
-
-
-
-
-
-    def inferenceVideo(self, device, class_names, image2color, img_size, tf,  video_path, save_vis_path=None, ckpt_path=None, T=0.3, agnostic=False, show_text=True, half=False):
-        '''推理一段视频
-            # Args:
-                - device:        cpu/cuda
-                - class_names:   每个类别的名称, list
-                - image2color:   每个类别一个颜色
-                - img_size:      固定图像大小 如[832, 832]
-                - tf:            数据预处理(基于albumentation库)
-                - video_pat:     视频路径
-                - save_vis_path: 可视化图像保存路径
-                - ckpt_path:     模型权重路径
-                - T:             可视化的IoU阈值
-
-            # Returns:
-                - boxes:       网络回归的box坐标    [obj_nums, 4]
-                - box_scores:  网络预测的box置信度  [obj_nums]
-                - box_classes: 网络预测的box类别    [obj_nums]
-        '''
-        if ckpt_path != None:
-            self.load_state_dict(torch.load(ckpt_path))
-            self.eval()
-        # 创建视频捕获对象
-        cap = cv2.VideoCapture(video_path)
-        # 获取视频的基本信息
-        fps = int(cap.get(cv2.CAP_PROP_FPS))
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        # 定义视频编码器和创建 VideoWriter 对象
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')  # 或者 'XVID' 'mp4v'
-        out = cv2.VideoWriter(save_vis_path, fourcc, fps, (width, height))
-        # 检查视频是否正确打开
-        if not cap.isOpened():
-            print("Error: Could not open video.")
-            exit()
-
-        # 逐帧读取视频
-        cnt_frame =  1
-        start_time = time.time()
-        while True:
-            ret, frame = cap.read()  # ret是一个布尔值，frame是每一帧的图像
-            if not ret:
-                print("Reached end of video or failed to read frame.")
-                break
-
-            '''此处为推理'''
-            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            boxes, box_scores, box_classes = self.infer(frame, self.img_size, tf, device, T, agnostic, half=half)
-            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            #  检测出物体才继续    
-            if len(boxes) != 0: 
-                '''画框'''
-                frame = OpenCVDrawBox(frame, boxes, box_classes, box_scores, None, image2color, class_names, resize_size=[2000, 2000], show_text=show_text)
-                # 统计检测出的类别和数量
-                detect_cls = dict(Counter(box_classes))
-                detect_name = {}
-                for key, val in detect_cls.items():
-                    detect_name[class_names[key]] = val
-            # 写入处理后的帧到新视频
-            out.write(frame)
-            print(f'process frame {frame.shape}: [{cnt_frame}/{total_frames}] | {detect_name}')
-            cnt_frame += 1
-        end_time = time.time()
-        print(f"total_time: {end_time - start_time}(s) | fps: {cnt_frame / (end_time - start_time)}")
-        # 释放视频捕获对象和视频写入对象，销毁所有OpenCV窗口
-        cap.release()
-        out.release()
-        cv2.destroyAllWindows()
-
-
 
 
 

@@ -5,4 +5,11 @@ ckpt/
 samples/
 debug.txt
 plot_dataset.jpg
+kmeans_for_anchors.jpg
+last.pt
 run.sh
+
+datasets/YOLOv8Dataset.py
+models/YOLOv8
+
+DOTADataset.py

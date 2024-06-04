@@ -150,7 +150,7 @@ class RPN(nn.Module):
         return RPNReg, RPNCls
 
 
-    def forward(self, lvl_x, imgSize):
+    def forward(self, lvl_x, imgSize, tta=False):
         '''前向传播
 
         Args:
@@ -165,6 +165,8 @@ class RPN(nn.Module):
             :param lvl_origin_RoIs: 遍布整个特征图的初始anchor(原图尺寸)  [bs, w*h*3, 4]
             :param  lvl_RoIs_idx:   一个batch里所有proposal的索引, 这样才知道哪些proposal属于哪张图像 [bs, 100]
         ''' 
+        if tta:
+            self.all_anchors = applyAnchor2Feat(genAnchor(self.anchors), self.featStride, imgSize)
         # 这些变量用于保存不同尺度的前向结果
         lvl_rpn_reg, lvl_rpn_cls, lvl_nms_RoIs, lvl_origin_RoIs, lvl_RoIs_idx = [], [], [], [], []
         '''对fpn不同特征层分别做前向'''
