@@ -16,9 +16,9 @@
 
 **demo**
 
-![1](https://github.com/Scienthusiasts/HeltonDetection/blob/dev1.0/demo/1.jpg)
+![1](https://github.com/Scienthusiasts/HeltonDetection/blob/dev/demo/1.jpg)
 
-![2](https://github.com/Scienthusiasts/HeltonDetection/blob/dev1.0/demo/2.jpg)
+![2](https://github.com/Scienthusiasts/HeltonDetection/blob/dev/demo/2.jpg)
 
 
 **reference**
