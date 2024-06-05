@@ -4,7 +4,7 @@
 
 **24/5/25 更新 :**
 
-发布`dev1.0`分支 
+发布`dev`分支 
 
 - FasterRCNN-FPN(FPN, PAFPN(YOLOv8), Decoupled-Head, 可更换Backbone, 或自定义neck, head和其中的组件)
 - YOLOv5(PAFPN(YOLOv5), 可更换Backbone, 或自定义neck, head和其中的组件)
