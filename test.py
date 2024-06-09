@@ -9,7 +9,9 @@ from PIL import Image
 from tqdm import tqdm
 from torchvision.ops import nms
 from pycocotools.coco import COCO
+
 # 自定义模块
+from utils.metrics import *
 from utils.util import *
 from utils.FasterRCNNAnchorUtils import *
 

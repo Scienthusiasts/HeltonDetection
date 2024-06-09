@@ -3,6 +3,7 @@ from PIL import Image
 from collections import Counter
 import time
 
+from utils.metrics import *
 from models.YOLOv5.Backbone import *
 from models.YOLOv5.PAFPN import *
 from models.YOLOv5.Head import *

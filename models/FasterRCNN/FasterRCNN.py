@@ -3,6 +3,7 @@ from PIL import Image
 import time
 from collections import Counter
 
+from utils.metrics import *
 from models.FasterRCNN.Backbone import *
 from models.FasterRCNN.PAFPN import *
 from models.FasterRCNN.FPN import *

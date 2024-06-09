@@ -1,19 +1,8 @@
 # coding=utf-8
 import os
-import json
 import torch
-import logging
-import datetime
-import numpy as np
-from torch import nn
 from tqdm import tqdm
-from PIL import Image
-import torch.optim as optim
-from functools import partial
-from pycocotools.coco import COCO
 import torch.backends.cudnn as cudnn
-from torch.utils.data import DataLoader
-from timm.scheduler import CosineLRScheduler
 
 
 # 自定义模块
