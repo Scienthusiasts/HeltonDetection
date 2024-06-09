@@ -11,7 +11,7 @@ PHI = 's'
 TESTCKPT = f"log/yolov5/log_yolov5{PHI}_COCO_mosaic_0.5/best_AP50.pt"
 BACKBONE = f'ckpt/cspdarknet_{PHI}_v6.1_backbone.pth'
 LOADCKPT = f"log/yolov5/log_yolov5{PHI}_COCO_mosaic_0.5/best_AP50.pt"
-RESUME = None
+RESUME = False
 # [640, 640] [832, 832] [1024, 1024] [1280, 1280] [2048, 2048]
 IMGSIZE = [640, 640]
 TTA = [[640,640], [832,832], [960,960]]

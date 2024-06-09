@@ -1,12 +1,12 @@
 # train eval test
-MODE = 'eval'
+MODE = 'train'
 # mobilenetv3_large_100.ra_in1k  resnet50.a1_in1k  darknetaa53.c2ns_in1k cspdarknet53.ra_in1k cspresnext50.ra_in1k
 BACKBONE = 'resnet50.a1_in1k'
 FROZEBACKBONE = True
 # log/fasterrcnn/pafpn_decoupledhead_VOC_mosaic_0.5/best_mAP.pt
 TESTCKPT = "log/fasterrcnn/pafpn_decoupledhead_COCO_mosaic_0.5/best_AP50.pt"
 MINSCALE = 8
-RESUME = None
+RESUME = False
 LOADCKPT = "log/fasterrcnn/pafpn_decoupledhead_COCO_mosaic_0.5/best_AP50.pt"
 # [832, 832] [1024, 1024] [1280, 1280]1
 IMGSIZE = [832, 832]

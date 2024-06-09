@@ -1,5 +1,5 @@
 # train eval test
-MODE = 'eval'
+MODE = 'train'
 # mobilenetv3_large_100.ra_in1k  resnet50.a1_in1k  darknetaa53.c2ns_in1k cspdarknet53.ra_in1k cspresnext50.ra_in1k
 FROZEBACKBONE = True
 # log_yolov5_VOC_mosaic_0.5_focalloss_obj_root_cls  log_yolov5_VOC_mosaic_0.5_focalloss_root_obj_root_cls_balance_4_1_0.4 
@@ -9,7 +9,7 @@ PHI = 's'
 TESTCKPT = 'last.pt'
 BACKBONE = f'ckpt/yolov8_{PHI}_backbone_weights.pth'
 LOADCKPT = 'last.pt'
-RESUME = None
+RESUME = False
 # [640, 640] [832, 832] [1024, 1024] [1280, 1280] [2048, 2048]
 IMGSIZE = [640, 640]
 TTA = [[640,640], [832,832], [960,960]]
