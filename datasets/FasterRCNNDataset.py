@@ -245,7 +245,7 @@ class COCODataset(Dataset):
         for ann in anns:
             # 过滤掉稠密聚集的标注框
             if ann['iscrowd'] == 1: continue
-            if ann['ignore'] == 1: continue
+            # if ann['ignore'] == 1: continue
             labelName = ann['category_id']
             labels.append(labelName)
             boxes.append(ann['bbox'])

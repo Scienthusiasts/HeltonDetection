@@ -45,22 +45,8 @@ class Model(nn.Module):
         if loadckpt!=None: 
             # self.load_state_dict(torch.load(loadckpt))
             # print('yolov5 pretrain ckpt loaded!')
-
-            # 加快模型训练的效率
-            print('Loading weights into state dict by size matching...')
-            model_dict = self.state_dict()
-            pretrained_dict = torch.load(loadckpt)
-            a = {}
-            for (kk, vv), (k, v) in zip(pretrained_dict.items(), model_dict.items()):
-                try:    
-                    if np.shape(vv) ==  np.shape(v):
-                        # print(f'(previous){kk} -> (current){k}')
-                        a[k]=vv
-                except:
-                    print(f'(previous){kk} mismatch (current){k}')
-            model_dict.update(a)
-            self.load_state_dict(model_dict)
-            print('Finished!')
+            # 基于尺寸的匹配方式(能克服局部模块改名加载不了的问题)
+            self = loadWeightsBySizeMatching(self, loadckpt)
             
 
 
