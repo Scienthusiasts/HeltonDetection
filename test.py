@@ -9,12 +9,14 @@ from PIL import Image
 from tqdm import tqdm
 from torchvision.ops import nms
 from pycocotools.coco import COCO
+from thop import profile
+from thop import clever_format
 
 # 自定义模块
 from utils.metrics import *
 from utils.util import *
 from utils.FasterRCNNAnchorUtils import *
-
+from utils.exportUtils import onnxInferenceSingleImg, onnxInferenceVideo
 
 
 
@@ -43,7 +45,7 @@ class Test():
 
 
 
-    def predict(self, mode, path, save_vis_path=None, ckpt_path=None, T=0.3, agnostic=False, vis_heatmap=False, show_text=True, **kwargs):
+    def predict(self, mode, img_path, onnx_path=False, save_vis_path=None, ckpt_path=None, T=0.3, agnostic=False, vis_heatmap=False, show_text=True, **kwargs):
         '''推理一张图
             Args:
                 - path:          图片/视频路径
@@ -57,11 +59,19 @@ class Test():
         # 调用模型自己的推理方法
         if mode == 'image':
             boxes, box_scores, box_classes = inferenceSingleImg(
-                self.model, self.device, self.class_names, self.image2color, self.img_size, self.tf, path, save_vis_path, ckpt_path, T, agnostic, show_text, vis_heatmap, self.half, self.tta
+                self.model, self.device, self.class_names, self.image2color, self.img_size, self.tf, img_path, save_vis_path, ckpt_path, T, agnostic, show_text, vis_heatmap, self.half, self.tta
                 )
             return boxes, box_scores, box_classes
+        if mode == 'image_onnx':
+            boxes, box_scores, box_classes = onnxInferenceSingleImg(
+                self.model, self.device, self.class_names, self.image2color, self.img_size, self.tf, img_path, onnx_path, save_vis_path, T, agnostic, show_text, vis_heatmap
+                )            
+            return boxes, box_scores, box_classes
         if mode == 'video':
-            inferenceVideo(self.model, self.device, self.class_names, self.image2color, self.img_size, self.tf, path, save_vis_path, ckpt_path, T, agnostic, show_text, self.half)
+            inferenceVideo(self.model, self.device, self.class_names, self.image2color, self.img_size, self.tf, img_path, save_vis_path, ckpt_path, T, agnostic, show_text, self.half)
+        if mode == 'video_onnx':   
+            onnxInferenceVideo(self.model, self.device, self.class_names, self.image2color, self.img_size, self.tf, img_path, onnx_path, save_vis_path, T, agnostic, show_text)
+
 
 
 
@@ -154,6 +164,13 @@ class Test():
 
         # 计算 mAP, ap_50
         mAP, ap_50 = evalCOCOmAP(json_path, pred_json_path)
+
+        '''使用thop分析模型的运算量和参数量'''
+        input_x = torch.rand(1, 3, self.img_size[0], self.img_size[1]).to(self.device)
+        flops, params = profile(self.model, inputs=(input_x,))
+        # 将结果转换为更易于阅读的格式
+        flops, params = clever_format([flops, params], '%.3f')
+        print(f"FLOPs↓: {flops}, 参数量↓: {params}")
         return mAP, ap_50
 
 

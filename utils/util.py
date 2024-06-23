@@ -395,7 +395,9 @@ def inferenceVideo(model, device, class_names, image2color, img_size, tf, video_
 
         '''此处为推理'''
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        infer_s = time.time()
         boxes, box_scores, box_classes = model.infer(frame, model.img_size, tf, device, T, agnostic, half=half)
+        infer_e = time.time()
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         #  检测出物体才继续    
         if len(boxes) != 0: 
@@ -408,14 +410,14 @@ def inferenceVideo(model, device, class_names, image2color, img_size, tf, video_
                 detect_name[class_names[key]] = val
         # 写入处理后的帧到新视频
         out.write(frame)
-        print(f'process frame {frame.shape}: [{cnt_frame}/{total_frames}] | {detect_name}')
+        print(f'process frame {frame.shape}: [{cnt_frame}/{total_frames}] | time(ms): {round(infer_e-infer_s, 3)} | {detect_name}')
         cnt_frame += 1
     end_time = time.time()
     print(f"total_time: {end_time - start_time}(s) | fps: {cnt_frame / (end_time - start_time)}")
     # 释放视频捕获对象和视频写入对象，销毁所有OpenCV窗口
     cap.release()
     out.release()
-    cv2.destroyAllWindows()
+    # cv2.destroyAllWindows()
 
 
 

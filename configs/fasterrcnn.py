@@ -1,5 +1,7 @@
-# train eval test
-MODE = 'train'
+import os
+
+# train eval test export
+MODE = 'export'
 # mobilenetv3_large_100.ra_in1k  resnet50.a1_in1k  darknetaa53.c2ns_in1k cspdarknet53.ra_in1k cspresnext50.ra_in1k
 BACKBONE = 'resnet50.a1_in1k'
 FROZEBACKBONE = True
@@ -8,18 +10,21 @@ TESTCKPT = "log/fasterrcnn/pafpn_decoupledhead_COCO_mosaic_0.5/best_AP50.pt"
 MINSCALE = 8
 RESUME = False
 LOADCKPT = "log/fasterrcnn/pafpn_decoupledhead_COCO_mosaic_0.5/best_AP50.pt"
-# [832, 832] [1024, 1024] [1280, 1280]1
-IMGSIZE = [832, 832]
 TTA = [[640,640], [832,832], [960,960]]
 TTAOPEN = False
-ANCHORS = [[[90.5097, 181.0193], [128, 128], [181.0193, 90.5097]], [[181.0193, 362.0387], [256, 256], [362.0387, 181.0193]], [[362.0387, 724.0773], [512, 512], [724.0773, 362.0387]]]
-# ANCHORS = [[[90.5097/2, 181.0193/2], [128/2, 128/2], [181.0193/2, 90.5097/2]], [[181.0193/2, 362.0387/2], [256/2, 256/2], [362.0387/2, 181.0193/2]], [[362.0387/2, 724.0773/2], [512/2, 512/2], [724.0773/2, 362.0387/2]]]
 S = [8, 16, 32]
 
+onnx_export_dir = os.path.join('onnx_ckpt', TESTCKPT.split('/')[1])
+onnx_export_name = f"{TESTCKPT.split('/')[-2]}.onnx"
 
 
-# VOC
+
+
+
+'''VOC'''
 # CATNUMS = 20
+# IMGSIZE = [832, 832]
+# ANCHORS = [[[90.5097, 181.0193], [128, 128], [181.0193, 90.5097]], [[181.0193, 362.0387], [256, 256], [362.0387, 181.0193]], [[362.0387, 724.0773], [512, 512], [724.0773, 362.0387]]]
 # train_json_path = 'E:/datasets/Universal/VOC0712/VOC2007/Annotations/coco/train.json'
 # val_json_path =   'E:/datasets/Universal/VOC0712/VOC2007/Annotations/coco/test.json'
 # train_img_dir =   'E:/datasets/Universal/VOC0712/VOC2007/JPEGImages'
@@ -29,8 +34,10 @@ S = [8, 16, 32]
 # cat_map = None
 # reverse_map = None
 
-# COCO
+'''COCO'''
 CATNUMS = 80
+IMGSIZE = [832, 832]
+ANCHORS = [[[90.5097, 181.0193], [128, 128], [181.0193, 90.5097]], [[181.0193, 362.0387], [256, 256], [362.0387, 181.0193]], [[362.0387, 724.0773], [512, 512], [724.0773, 362.0387]]]
 train_json_path = 'E:/datasets/Universal/COCO2017/COCO/annotations/instances_train2017.json'
 val_json_path =   'E:/datasets/Universal/COCO2017/COCO/annotations/instances_val2017.json'
 train_img_dir =   'E:/datasets/Universal/COCO2017/COCO/train2017'
@@ -51,8 +58,10 @@ reverse_map = {0:1, 1:2, 2:3, 3:4, 4:5, 5:6, 6:7, 7:8, 8:9, 9:10, 10:11, 11:13, 
        41:47, 42:48, 43:49, 44:50, 45:51, 46:52, 47:53, 48:54, 49:55, 50:56, 51:57, 52:58, 53:59, 54:60, 55:61, 56:62, 57:63, 58:64, 59:65, 
        60:67, 61:70, 62:72, 63:73, 64:74, 65:75, 66:76, 67:77, 68:78, 69:79, 70:80, 71:81, 72:82, 73:84, 74:85, 75:86, 76:87, 77:88, 78:89, 79:90}
 
-# visDrone2019
+'''visDrone2019'''
 # CATNUMS = 10
+# IMGSIZE = [1280, 1280]
+# ANCHORS = [[[90.5097/2, 181.0193/2], [128/2, 128/2], [181.0193/2, 90.5097/2]], [[181.0193/2, 362.0387/2], [256/2, 256/2], [362.0387/2, 181.0193/2]], [[362.0387/2, 724.0773/2], [512/2, 512/2], [724.0773/2, 362.0387/2]]]
 # train_json_path = '/data/cs/yht/datasets/visdrone2019/annotations/train.json'
 # val_json_path =   '/data/cs/yht/datasets/visdrone2019/annotations/test.json'
 # train_img_dir =   '/data/cs/yht/datasets/visdrone2019/images/train/images'
@@ -68,7 +77,7 @@ runner = dict(
     resume = RESUME,
     img_size = IMGSIZE,
     epoch = 12*3,
-    log_dir = './log/fasterrcnn',
+    log_dir = './log/tmp_exp',
     log_interval = 1,
     eval_interval = 1,
     reverse_map = reverse_map,
@@ -160,7 +169,7 @@ test = dict(
     # "E:/datasets/Univer
     # sal/COCO2017/unlabeled2017/000000001234.jpg" 2382 2000 5611 1356 1800 1808 2548 
     # E:/datasets/RemoteSensing/visdrone2019/images/test/images/0000087_00009_d_0000001.jpg
-    path = "./samples/imgs/12.jpg",
+    img_path = "./samples/imgs/12.jpg",
     save_vis_path = './samples/imgs/res1.jpg',
     # video
     # path = "./samples/videos/people_covered.mp4",
@@ -171,4 +180,27 @@ test = dict(
     show_text = True,
     # frcnn还没实现vis_heatmap:
     vis_heatmap = False,
+    # onnx 权重路径
+    onnx_path = os.path.join(onnx_export_dir, onnx_export_name),
+)
+
+
+
+export = dict(
+    export_dir = onnx_export_dir,
+    export_name = onnx_export_name,
+    ckpt_path = TESTCKPT,
+    export_param = dict(
+        # 输入 Tensor 的名称, 如果不指定，会使用默认名字
+        input_names=['input'],   
+        # 输出 Tensor 的名称, 如果不指定，会使用默认名字
+        output_names=['reg', 'cls'],  
+        # 动态输入输出设置:
+        dynamic_axes = {
+            # 哪个维度动态字典里索引就设置在哪个维度:
+            'input': {0: 'batch_size', 2:'input_w', 3:'input_h'},
+            'reg':   {0: 'batch_size'},
+            'cls':   {0: 'batch_size'},
+        }
+    )
 )

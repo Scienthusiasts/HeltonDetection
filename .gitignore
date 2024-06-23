@@ -3,6 +3,7 @@ __pycache__/
 log/
 ckpt/
 samples/
+onnx_ckpt/
 debug.txt
 plot_dataset.jpg
 kmeans_for_anchors.jpg

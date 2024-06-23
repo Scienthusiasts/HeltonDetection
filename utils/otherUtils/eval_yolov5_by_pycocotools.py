@@ -17,6 +17,8 @@ import os
 from tqdm import tqdm
 from pycocotools.cocoeval import COCOeval
 from tabulate import tabulate
+from thop import profile
+from thop import clever_format
 
 import platform
 if platform.system() == 'Windows':
@@ -212,8 +214,15 @@ class YOLOv5Detector:
         with open(pred_json_path, 'w') as json_file:
             json.dump(anns_dict, json_file)
 
-        # 计算 mAP, ap_50
+        '''计算 mAP, ap_50'''
         mAP, ap_50 = evalCOCOmAP(json_path, pred_json_path)
+
+        '''使用thop分析模型的运算量和参数量'''
+        input_x = torch.rand(1, 3, self.imgsz, self.imgsz).to(self.device)
+        flops, params = profile(self.model, inputs=(input_x,))
+        # 将结果转换为更易于阅读的格式
+        flops, params = clever_format([flops, params], '%.3f')
+        print(f"FLOPs↓: {flops}, 参数量↓: {params}")
         return mAP, ap_50
     
 

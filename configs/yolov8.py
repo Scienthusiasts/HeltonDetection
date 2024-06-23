@@ -1,22 +1,29 @@
+import os
+
 # train eval test
-MODE = 'train'
+MODE = 'export'
 # mobilenetv3_large_100.ra_in1k  resnet50.a1_in1k  darknetaa53.c2ns_in1k cspdarknet53.ra_in1k cspresnext50.ra_in1k
 FROZEBACKBONE = True
 # log_yolov5_VOC_mosaic_0.5_focalloss_obj_root_cls  log_yolov5_VOC_mosaic_0.5_focalloss_root_obj_root_cls_balance_4_1_0.4 
 # ./log/yolo/log_yolov5{PHI}_COCO_mosaic_0.5/best_mAP.pt /log/yolo/log_yolov5s_visDrone_mosaic_0.5_root_focalloss/best_mAP.pt
 PHI = 's'
 # 'last.pt' 
-TESTCKPT = 'last.pt'
+TESTCKPT = 'log/yolov8/log_yolov8s_COCO_mosaic_0.5/best_mAP.pt'
 BACKBONE = f'ckpt/yolov8_{PHI}_backbone_weights.pth'
-LOADCKPT = 'last.pt'
+LOADCKPT = 'log/yolov8/log_yolov8s_COCO_mosaic_0.5/best_mAP.pt'
 RESUME = False
-# [640, 640] [832, 832] [1024, 1024] [1280, 1280] [2048, 2048]
-IMGSIZE = [640, 640]
 TTA = [[640,640], [832,832], [960,960]]
 TTAOPEN = False
 
+onnx_export_dir = os.path.join('onnx_ckpt', TESTCKPT.split('/')[1])
+onnx_export_name = f"{TESTCKPT.split('/')[-2]}.onnx"
+
+
+
+
 '''VOC'''
 # CATNUMS = 20
+# IMGSIZE = [640, 640]
 # train_json_path = 'E:/datasets/Universal/VOC0712/VOC2007/Annotations/coco/train.json'
 # val_json_path =   'E:/datasets/Universal/VOC0712/VOC2007/Annotations/coco/test.json'
 # train_img_dir =   'E:/datasets/Universal/VOC0712/VOC2007/JPEGImages'
@@ -28,6 +35,7 @@ TTAOPEN = False
 
 '''COCO'''
 CATNUMS = 80
+IMGSIZE = [640, 640]
 train_json_path = 'E:/datasets/Universal/COCO2017/COCO/annotations/instances_train2017.json'
 val_json_path =   'E:/datasets/Universal/COCO2017/COCO/annotations/instances_val2017.json'
 train_img_dir =   'E:/datasets/Universal/COCO2017/COCO/train2017'
@@ -49,6 +57,7 @@ reverse_map = {0:1, 1:2, 2:3, 3:4, 4:5, 5:6, 6:7, 7:8, 8:9, 9:10, 10:11, 11:13, 
        60:67, 61:70, 62:72, 63:73, 64:74, 65:75, 66:76, 67:77, 68:78, 69:79, 70:80, 71:81, 72:82, 73:84, 74:85, 75:86, 76:87, 77:88, 78:89, 79:90}
 
 '''visDrone2019'''
+# IMGSIZE = [1280, 1280]
 # CATNUMS = 10
 # train_json_path = 'E:/datasets/RemoteSensing/visdrone2019/annotations/train.json'
 # val_json_path =   'E:/datasets/RemoteSensing/visdrone2019/annotations/test.json'
@@ -59,6 +68,7 @@ reverse_map = {0:1, 1:2, 2:3, 3:4, 4:5, 5:6, 6:7, 7:8, 8:9, 9:10, 10:11, 11:13, 
 # reverse_map = None
 
 '''DOTA'''
+# IMGSIZE = [1024, 1024]
 # CATNUMS = 15
 # train_json_path = 'E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/coco_ann/hbox_train.json'
 # val_json_path =   'E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/coco_ann/hbox_val.json'
@@ -79,7 +89,7 @@ runner = dict(
     resume = RESUME,
     img_size = IMGSIZE,
     epoch = 12*4,
-    log_dir = './log/yolov8',
+    log_dir = './log/tmp_exp',
     log_interval = 1,
     eval_interval = 1,
     reverse_map = reverse_map,
@@ -172,4 +182,19 @@ test = dict(
     agnostic = False,
     show_text = True,
     vis_heatmap = True,
+)
+
+
+export = dict(
+    export_dir = onnx_export_dir,
+    export_name = onnx_export_name,
+    ckpt_path = TESTCKPT,
+    export_param = dict(
+        # 输入 Tensor 的名称, 如果不指定，会使用默认名字
+        input_names=['input'],   
+        # 输出 Tensor 的名称, 如果不指定，会使用默认名字
+        output_names=['output'],  
+        # 动态输入输出设置:
+        dynamic_axes = None
+    )
 )

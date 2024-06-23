@@ -204,6 +204,58 @@ class Model(nn.Module):
 
 
 
+    def onnxInfer(self, onnx_model, image:np.array, img_size, tf, device, T, image2color=None, agnostic=False, vis_heatmap=False, save_vis_path=None):
+        '''推理一张图/一帧
+            # Args:
+                - image:  读取的图像(nparray格式)
+                - tf:     数据预处理(基于albumentation库)
+                - device: cpu/cuda
+                - T:      可视化的IoU阈值
+            # Returns:
+                - boxes:       网络回归的box坐标    [obj_nums, 4]
+                - box_scores:  网络预测的box置信度  [obj_nums]
+                - box_classes: 网络预测的box类别    [obj_nums]
+        '''
+        H, W = np.array(np.shape(image)[0:2])
+        # tensor_img有padding的黑边
+        # 注意permute(2,0,1) 不要写成permute(2,1,0)
+        tensor_img = torch.tensor(tf.testTF(image=image)['image']).permute(2,0,1).unsqueeze(0)
+        onnx_input_img = tensor_img.numpy()
+
+        '''网络推理得到最原始的未解码未nms的结果'''
+        # p3, p4, p5
+        p3_predict, p4_predict, p5_predict = onnx_model.run(['p3_head', 'p4_head', 'p5_head'], {'input': onnx_input_img})
+        predicts = [torch.tensor(p3_predict).to(device), torch.tensor(p4_predict).to(device), torch.tensor(p5_predict).to(device)]
+        '''利用Head的预测结果对RPN proposals进行微调+解码 获得预测框'''
+        # torch.Size([1, 1200, 85])
+        # torch.Size([1, 4800, 85])
+        # torch.Size([1, 19200, 85])
+        decode_predicts = inferDecodeBox(predicts, img_size, self.num_classes, self.anchors, self.anchors_mask)
+        '''计算nms, 并将box坐标从归一化坐标转换为绝对坐标'''
+        # torch.cat(decode_predicts, 1) : torch.Size([1, 25200, 85])
+        decode_predicts = non_max_suppression(torch.cat(decode_predicts, 1), img_size, conf_thres=T, nms_thres=0.3, agnostic=agnostic)
+        # 图像里没预测出目标的情况:
+        if len(decode_predicts) == 0 : return [],[],[]
+        box_classes = np.array(decode_predicts[0][:, 6], dtype = 'int32')
+        box_scores = decode_predicts[0][:, 4] * decode_predicts[0][:, 5]
+        # xyxy
+        boxes = decode_predicts[0][:, :4]
+        '''box坐标映射(有灰边图像里的坐标->原图的坐标)'''
+        # W, H 原始图像的大小
+        H, W = image.shape[:2]
+        max_len = max(W, H)
+        # w, h 缩放后的图像的大小
+        w = int(W * img_size[0] / max_len)
+        h = int(H * img_size[1] / max_len)
+        # 将box坐标(对应有黑边的图)映射回无黑边的原始图像
+        boxes = mapBox2OriginalImg(boxes, W, H, [w, h], padding=True)
+        '''是否可视化obj heatmap'''
+        if vis_heatmap:vis_YOLOv5_heatmap(predicts, [W, H], img_size, image, box_classes, save_vis_path=save_vis_path)
+
+        return boxes, box_scores, box_classes
+        
+
+
 
 
 

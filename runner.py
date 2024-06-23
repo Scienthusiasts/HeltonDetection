@@ -3,14 +3,14 @@ import os
 import torch
 from tqdm import tqdm
 import torch.backends.cudnn as cudnn
-
+from torch.utils.tensorboard import SummaryWriter
 
 # 自定义模块
 from test import Test
 from utils.util import *
 from utils.runnerUtils import *
-from torch.utils.tensorboard import SummaryWriter
 
+from utils.exportUtils import torchExportOnnx
 
 
 
@@ -83,7 +83,7 @@ class Runner():
             json_save_dir, _ = os.path.split(self.log_save_path)
             self.argsHistory = ArgsHistory(json_save_dir)
         '''导入数据集'''
-        if self.mode !='test':
+        if self.mode in ['train', 'eval']:
             self.train_data, \
             self.train_data_loader, \
             self.val_json_path, \
@@ -109,7 +109,7 @@ class Runner():
         '''导入评估模块'''
         self.test = Test(dataset['my_dataset']['path'], self.model, self.img_size, self.class_names, self.device, **test)
         '''打印训练参数'''
-        if self.mode != 'test':
+        if self.mode in ['train', 'eval']:
             val_data_len = self.val_data.__len__()
             train_data_len = self.train_data.__len__() if self.mode=='train' else 0
             printRunnerArgs(
@@ -245,17 +245,20 @@ class Runner():
 
 
 
-    def tester(self, mode, path, save_vis_path, ckpt_path, T, agnostic, vis_heatmap, show_text):
+    def tester(self, mode, img_path, save_vis_path, ckpt_path, T, agnostic, vis_heatmap, show_text, onnx_path):
         '''推理一张图像/一段视频
         '''
-        self.test.predict(mode, path, save_vis_path=save_vis_path, ckpt_path=ckpt_path, T=T, agnostic=agnostic, vis_heatmap=vis_heatmap, show_text=show_text)
+        self.test.predict(mode, img_path = img_path, onnx_path=onnx_path, save_vis_path=save_vis_path, ckpt_path=ckpt_path, T=T, agnostic=agnostic, vis_heatmap=vis_heatmap, show_text=show_text)
 
 
 
 
 
 
-
+    def exporter(self, export_dir, export_name, export_param, ckpt_path):
+        '''导出为onnx格式
+        '''
+        torchExportOnnx(self.model, self.device, self.img_size, export_dir, export_name, export_param, ckpt_path)
 
 
 
@@ -270,6 +273,7 @@ if __name__ == '__main__':
     runner_config = config_file.runner
     eval_config = config_file.eval
     test_config = config_file.test
+    export_config = config_file.export
 
     runner = Runner(**runner_config)
     # 训练模式
@@ -281,5 +285,7 @@ if __name__ == '__main__':
     # 测试模式
     elif runner_config['mode'] == 'test':
         runner.tester(**test_config)
+    elif runner_config['mode'] == 'export':
+        runner.exporter(**export_config)
     else:
         print("mode not valid. it must be 'train', 'eval' or 'test'.")

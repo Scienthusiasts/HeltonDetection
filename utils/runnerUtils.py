@@ -18,7 +18,6 @@ from timm.scheduler import CosineLRScheduler
 
 
 # 自定义模块
-from test import Test
 from utils.util import *
 from utils.FasterRCNNAnchorUtils import *
 from torch.utils.tensorboard import SummaryWriter

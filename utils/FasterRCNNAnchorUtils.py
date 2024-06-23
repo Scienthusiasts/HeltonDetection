@@ -203,7 +203,7 @@ def reg2Bbox(anchor, reg):
             调整后的proposal
     '''
     # 没有anchor
-    if anchor.size()[0] == 0:
+    if anchor.size(0) == 0:
         return torch.zeros((0, 4), dtype=reg.dtype)
     # anchor的格式xyxy->cxcywh
     anchorW  = torch.unsqueeze(anchor[:, 2] - anchor[:, 0], -1)
@@ -492,7 +492,7 @@ def dense2SparseProposals(roi, cls, imgSize, scale, pre_nms_num, post_nms_num, n
     '''去掉nms过滤的框'''
     keep = nms(roi, cls, nms_iou)
     # 如果proposal筛选后的个数不足PostNMSNum,则随机重复添加直到proposal个数=PostNMSNum
-    if len(keep) < post_nms_num:
+    if keep.shape[0] < post_nms_num:
         index_extra = np.random.choice(range(len(keep)), size=(post_nms_num - len(keep)), replace=True)
         keep = torch.cat([keep, keep[index_extra]])
     # 保留nms筛选后的proposal
