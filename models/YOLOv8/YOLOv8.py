@@ -89,7 +89,7 @@ class Model(nn.Module):
 
 
 
-    def infer(self, image:np.array, img_size, tf, device, T, agnostic=False, vis_heatmap=False, save_vis_path=None, half=False):
+    def infer(self, image:np.array, img_size, tf, device, T, image2color=None, agnostic=False, vis_heatmap=False, save_vis_path=None, half=False):
         '''推理一张图/一帧
             # Args:
                 - image:  读取的图像(nparray格式)
@@ -108,8 +108,8 @@ class Model(nn.Module):
         if half: tensor_img = tensor_img.half()
         with torch.no_grad():
             #   将图像输入网络当中进行预测！
-            outputs = self.forward(tensor_img)
-            outputs = decode_box(outputs, img_size)
+            outputs_list = self.forward(tensor_img)
+            outputs = decode_box(outputs_list, img_size)
             '''计算nms, 并将box坐标从归一化坐标转换为绝对坐标'''
             # torch.cat(decode_predicts, 1) : torch.Size([1, 25200, 85])
             decode_predicts = non_max_suppression(outputs, self.img_size, conf_thres=T, nms_thres=0.3, agnostic=agnostic)
@@ -129,6 +129,8 @@ class Model(nn.Module):
             h = int(H * img_size[1] / max_len)
             # 将box坐标(对应有黑边的图)映射回无黑边的原始图像
             boxes = mapBox2OriginalImg(boxes, W, H, [w, h], padding=True)
+            '''是否可视化obj heatmap'''
+            if vis_heatmap:vis_YOLOv8_heatmap(outputs_list[2], [W, H], img_size, image, box_classes, image2color, save_vis_path=save_vis_path)
             return boxes, box_scores, box_classes
 
 

@@ -3,24 +3,25 @@ import os
 import json
 import torch
 import logging
-from logging import Logger
 import datetime
 import numpy as np
 from torch import nn
 from tqdm import tqdm
 from PIL import Image
+from logging import Logger
 import torch.optim as optim
 from functools import partial
 from pycocotools.coco import COCO
 import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
 from timm.scheduler import CosineLRScheduler
-
+from torch.utils.tensorboard import SummaryWriter
 
 # 自定义模块
 from utils.util import *
+from opt.sophia import SophiaG
 from utils.FasterRCNNAnchorUtils import *
-from torch.utils.tensorboard import SummaryWriter
+
 
 
 
@@ -166,7 +167,8 @@ def optimSheduler(
         # adam会导致weight_decay错误，使用adam时建议设置为 0
         'adamw' : optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.999), weight_decay=0),
         'adam' : optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.999), weight_decay=0),
-        'sgd'  : optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True, weight_decay=0)
+        'sgd'  : optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True, weight_decay=0),
+        'sophia' : SophiaG(model.parameters(), lr=lr, betas=(0.965, 0.99), rho = 0.05, weight_decay=0),
     }[optim_type]
     # 使用warmup+余弦退火学习率
     scheduler = CosineLRScheduler(

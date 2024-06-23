@@ -90,7 +90,7 @@ class Test():
                 - box_scores:  网络预测的box置信度  [obj_nums]
                 - box_classes: 网络预测的box类别    [obj_nums]
         '''
-        boxes, box_scores, box_classes = self.predict(mode='image', path=img_path, T=T, agnostic=agnostic)
+        boxes, box_scores, box_classes = self.predict(mode='image', img_path=img_path, T=T, agnostic=agnostic)
         # 将预测结果转化为COCO格式下'annotations'下的一个字段(注意COCO的box格式是xywh)
         for box, score, cls in zip(boxes, box_scores, box_classes):
             if score>T:

@@ -1,16 +1,16 @@
 import os
 
 # train eval test
-MODE = 'export'
+MODE = 'eval'
 # mobilenetv3_large_100.ra_in1k  resnet50.a1_in1k  darknetaa53.c2ns_in1k cspdarknet53.ra_in1k cspresnext50.ra_in1k
 FROZEBACKBONE = True
 # log_yolov5_VOC_mosaic_0.5_focalloss_obj_root_cls  log_yolov5_VOC_mosaic_0.5_focalloss_root_obj_root_cls_balance_4_1_0.4 
 # ./log/yolo/log_yolov5{PHI}_COCO_mosaic_0.5/best_mAP.pt /log/yolo/log_yolov5s_visDrone_mosaic_0.5_root_focalloss/best_mAP.pt
 PHI = 's'
 # 'last.pt' 
-TESTCKPT = 'log/yolov8/log_yolov8s_COCO_mosaic_0.5/best_mAP.pt'
+TESTCKPT = 'log/yolov8/log_yolov8s_COCO_mosaic_0.5/2024-06-05-19-59-24_train/best_AP50.pt'
 BACKBONE = f'ckpt/yolov8_{PHI}_backbone_weights.pth'
-LOADCKPT = 'log/yolov8/log_yolov8s_COCO_mosaic_0.5/best_mAP.pt'
+LOADCKPT = 'log/yolov8/log_yolov8s_COCO_mosaic_0.5/2024-06-05-19-59-24_train/best_AP50.pt'
 RESUME = False
 TTA = [[640,640], [832,832], [960,960]]
 TTAOPEN = False
@@ -127,7 +127,7 @@ runner = dict(
         img_size = IMGSIZE,
         loadckpt = LOADCKPT,           
         backbone_name = BACKBONE,
-        tta_img_size = TTA,
+        # tta_img_size = TTA,
         backbone = dict(
             loadckpt=BACKBONE, 
             pretrain=False, 
@@ -172,7 +172,7 @@ test = dict(
     # "E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/val/images/P0019__1024__4608___0.png" P0086__1024__0___0.png 
     # P0168__1024__1024___512.png P0262__1024__512___0.png P0476__1024__122___205.png P0660__1024__136___0.png
     # P0833__1024__617___0.png
-    path = "./samples/imgs/cars.jpg",
+    img_path = "./samples/imgs/cars.jpg",
     save_vis_path = './samples/imgs/res1.jpg',
     # video
     # path = "./samples/videos/cars.mp4",
@@ -182,6 +182,8 @@ test = dict(
     agnostic = False,
     show_text = True,
     vis_heatmap = True,
+
+    onnx_path = False,
 )
 
 
