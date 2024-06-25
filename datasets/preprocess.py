@@ -18,6 +18,10 @@ class Transform():
             - box_format: 'yolo':norm(cxcywh), 'coco':xywh
         '''
         maxSize = max(imgSize[0], imgSize[1])
+        # 随机DropBlock
+        self.CoarseDropout = A.Compose([
+                A.CoarseDropout(max_holes=60, max_height=15, max_width=15, min_holes=30, min_height=5, min_width=5, fill_value=128, p=0.5),
+        ])
         # 训练时增强
         self.trainTF = A.Compose([
                 A.BBoxSafeRandomCrop(p=0.5),

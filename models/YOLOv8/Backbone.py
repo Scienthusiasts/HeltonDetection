@@ -100,7 +100,7 @@ class CSPDarknet(nn.Module):
                 'v8_cspdarknet_x' : 'https://github.com/bubbliiiing/yolov8-pytorch/releases/download/v1.0/yolov8_x_backbone_weights.pth',
             }[backbone]
             checkpoint = torch.hub.load_state_dict_from_url(url=url, map_location="cpu", model_dir="./ckpt")
-            self.load_state_dict(checkpoint, strict=False)
+            self.load_state_dict(checkpoint)
             print("Load weights from ", url.split('/')[-1])
             
         # 是否冻结backbone

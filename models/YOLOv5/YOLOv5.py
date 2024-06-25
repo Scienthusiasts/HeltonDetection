@@ -37,7 +37,7 @@ class Model(nn.Module):
         '''TTA增强'''
         self.tta = TTA(tta_img_size=tta_img_size)
         # 是否导入预训练权重
-        if loadckpt!=None: 
+        if loadckpt: 
             # self.load_state_dict(torch.load(loadckpt))
             # 基于尺寸的匹配方式(能克服局部模块改名加载不了的问题)
             self = loadWeightsBySizeMatching(self, loadckpt)

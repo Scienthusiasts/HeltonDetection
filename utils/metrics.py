@@ -4,6 +4,9 @@ import cv2
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 from ensemble_boxes import weighted_boxes_fusion as wbf
+import torch
+from thop import profile
+from thop import clever_format
 
 from datasets.preprocess import Transform
 
@@ -145,3 +148,16 @@ class TTA():
         tta_boxes[:, [0,2]] *= image.shape[1]
         tta_boxes[:, [1,3]] *= image.shape[0]
         return tta_boxes, tta_box_scores, tta_box_classes.astype(int)
+    
+
+
+
+
+def computeParamFLOPs(device, model, img_size:list[int], ):
+    '''使用thop分析模型的运算量和参数量
+    '''
+    input_x = torch.rand(1, 3, img_size[0], img_size[1]).to(device)
+    flops, params = profile(model, inputs=(input_x,))
+    # 将结果转换为更易于阅读的格式
+    flops, params = clever_format([flops, params], '%.3f')
+    print(f"FLOPs↓: {flops}, 参数量↓: {params}")

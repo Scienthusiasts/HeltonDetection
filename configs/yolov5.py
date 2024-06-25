@@ -1,7 +1,7 @@
 import os
 
 # train eval test export 
-MODE = 'test'
+MODE = 'eval'
 # mobilenetv3_large_100.ra_in1k  resnet50.a1_in1k  darknetaa53.c2ns_in1k cspdarknet53.ra_in1k cspresnext50.ra_in1k
 FROZEBACKBONE = True
 # log_yolov5_VOC_mosaic_0.5_focalloss_obj_root_cls  log_yolov5_VOC_mosaic_0.5_focalloss_root_obj_root_cls_balance_4_1_0.4 
@@ -21,7 +21,8 @@ MASK = [[0,1,2], [3,4,5], [6,7,8]]
 onnx_export_dir = os.path.join('onnx_ckpt', TESTCKPT.split('/')[1])
 onnx_export_name = f"{TESTCKPT.split('/')[-2]}.onnx"
 
-
+TESTCKPT = "last.pt"
+LOADCKPT = "last.pt"
 '''VOC'''
 # CATNUMS = 20
 # IMGSIZE = [640, 640]
@@ -181,7 +182,7 @@ eval = dict(
 
 test = dict(
     # image image_onnx video video_onnx
-    mode = 'video_onnx',
+    mode = 'image',
     # ./samples/imgs/12.jpg   
     # "E:/datasets/RemoteSensing/visdrone2019/images/test/images/1.jpg"
     # sal/COCO2017/unlabeled2017/000000001234.jpg" 2382 2000 5611 1356 1800 1808 2548 
@@ -190,11 +191,11 @@ test = dict(
     # "E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/val/images/P0019__1024__4608___0.png" P0086__1024__0___0.png 
     # P0168__1024__1024___512.png P0262__1024__512___0.png P0476__1024__122___205.png P0660__1024__136___0.png
     # P0833__1024__617___0.png
-    # img_path = "./samples/imgs/car1.jpg",
-    # save_vis_path = './samples/imgs/res1.jpg',
+    img_path = "E:/datasets/Universal/COCO2017/COCO/val2017/000000000139.jpg",
+    save_vis_path = './samples/imgs/res1.jpg',
     # video
-    img_path = "./samples/videos/cars_people.mp4",
-    save_vis_path = './samples/videos/res1.mp4',
+    # img_path = "./samples/videos/cars_people.mp4",
+    # save_vis_path = './samples/videos/res1.mp4',
     ckpt_path = TESTCKPT,
     T = 0.25,
     agnostic = False,

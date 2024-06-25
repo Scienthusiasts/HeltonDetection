@@ -107,6 +107,7 @@ class YOLOv5Detector:
     def __init__(self, weight: str, reverse_map:dict=None):
         self.device = select_device('')
         self.model = attempt_load(weight, device=self.device)
+        torch.save(self.model.state_dict(), "_last.pt")
         self.imgsz = 640
         self.score_thres = 0.01
         self.T = 0.3

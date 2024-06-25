@@ -68,6 +68,8 @@ class BaseDataset(Dataset):
         # albumentation的图像维度得是[W,H,C]
         train_trans = self.tf.trainTF(image=image, bboxes=boxes, category_ids=labels)
         image, boxes, labels = train_trans['image'], train_trans['bboxes'], train_trans['category_ids']
+        coarsedrop__trans = self.tf.CoarseDropout(image=image)
+        image = coarsedrop__trans['image']
         # 这里的box是coco格式(xywh)
         return image, boxes, labels
         
@@ -555,12 +557,12 @@ def visBatch(dataLoader:DataLoader, showText=False):
 
 def test_coco():
     # 固定随机种子
-    seed = 23
+    seed = 22
     seed_everything(seed)
     # BatcchSize
     BS = 25
     # 图像尺寸
-    imgSize = [1024, 1024]
+    imgSize = [640, 640]
     anchors = [[10, 13], [16, 30], [33, 23],
                 [30, 61], [62, 45], [59, 119],
                 [116, 90], [156, 198], [373, 326],
@@ -568,15 +570,15 @@ def test_coco():
     anchors_mask = [[0,1,2], [3,4,5], [6,7,8]]
 
     '''COCO'''
-    # trainAnnPath = "E:/datasets/Universal/COCO2017/COCO/annotations/instances_train2017.json"
-    # valAnnPath = "E:/datasets/Universal/COCO2017/COCO/annotations/instances_val2017.json"
-    # trainImgDir =  "E:/datasets/Universal/COCO2017/COCO/train2017"
-    # valImgDir = "E:/datasets/Universal/COCO2017/COCO/val2017"
-    # cls_num = 80
-    # map = {1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6, 8:7, 9:8, 10:9, 11:10, 13:11, 14:12, 15:13, 16:14, 17:15, 18:16, 19:17, 20:18, 21:19, 22:20, 23:21, 
-    #        24:22, 25:23, 27:24, 28:25, 31:26, 32:27, 33:28, 34:29, 35:30, 36:31, 37:32, 38:33, 39:34, 40:35, 41:36, 42:37, 43:38, 44:39, 46:40, 
-    #        47:41, 48:42, 49:43, 50:44, 51:45, 52:46, 53:47, 54:48, 55:49, 56:50, 57:51, 58:52, 59:53, 60:54, 61:55, 62:56, 63:57, 64:58, 65:59, 
-    #        67:60, 70:61, 72:62, 73:63, 74:64, 75:65, 76:66, 77:67, 78:68, 79:69, 80:70, 81:71, 82:72, 84:73, 85:74, 86:75, 87:76, 88:77, 89:78, 90:79}
+    trainAnnPath = "E:/datasets/Universal/COCO2017/COCO/annotations/instances_train2017.json"
+    valAnnPath = "E:/datasets/Universal/COCO2017/COCO/annotations/instances_val2017.json"
+    trainImgDir =  "E:/datasets/Universal/COCO2017/COCO/train2017"
+    valImgDir = "E:/datasets/Universal/COCO2017/COCO/val2017"
+    cls_num = 80
+    map = {1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6, 8:7, 9:8, 10:9, 11:10, 13:11, 14:12, 15:13, 16:14, 17:15, 18:16, 19:17, 20:18, 21:19, 22:20, 23:21, 
+           24:22, 25:23, 27:24, 28:25, 31:26, 32:27, 33:28, 34:29, 35:30, 36:31, 37:32, 38:33, 39:34, 40:35, 41:36, 42:37, 43:38, 44:39, 46:40, 
+           47:41, 48:42, 49:43, 50:44, 51:45, 52:46, 53:47, 54:48, 55:49, 56:50, 57:51, 58:52, 59:53, 60:54, 61:55, 62:56, 63:57, 64:58, 65:59, 
+           67:60, 70:61, 72:62, 73:63, 74:64, 75:65, 76:66, 77:67, 78:68, 79:69, 80:70, 81:71, 82:72, 84:73, 85:74, 86:75, 87:76, 88:77, 89:78, 90:79}
     '''VOC0712'''
     # trainAnnPath = "E:/datasets/Universal/VOC0712/VOC2007/Annotations/coco/train.json"
     # testAnnPath = "E:/datasets/Universal/VOC0712/VOC2007/Annotations/coco/val.json"
@@ -596,10 +598,10 @@ def test_coco():
     # cls_num = 10
     # map = {1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6, 8:7, 9:8, 10:9}
     '''DOTA-v1.0'''
-    trainImgDir = "E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/train/images"
-    trainAnnPath = "E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/coco_ann/hbox_train.json"
-    cls_num = 15
-    map = None
+    # trainImgDir = "E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/train/images"
+    # trainAnnPath = "E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/coco_ann/hbox_train.json"
+    # cls_num = 15
+    # map = None
 
 
 

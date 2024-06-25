@@ -9,7 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 from test import Test
 from utils.util import *
 from utils.runnerUtils import *
-
+from utils.metrics import computeParamFLOPs
 from utils.exportUtils import torchExportOnnx
 
 
@@ -228,6 +228,9 @@ class Runner():
             # self.valEpoch(T, agnostic=False, vis_heatmap=False, save_vis_path=None, half=False)
             # 采用一张图一张图遍历的方式,并生成评估结果json文件
             mAP, ap_50 = self.test.genPredJsonAndEval(self.val_json_path, self.val_img_dir, self.log_dir, pred_json_name, T=T, model=self.model, inferring=inferring, ckpt_path=ckpt_path, reverse_map=self.reverse_map, fuse=fuse)
+            '''最后一个epoch计算模型参数量, FLOPs'''
+            if epoch == self.epoch:
+                computeParamFLOPs(self.device, self.model, self.img_size)
             '''记录变量'''
             recoardArgs(mode='epoch', argsHistory=self.argsHistory, mAP=mAP, ap_50=ap_50)
             if self.mode == 'eval':            

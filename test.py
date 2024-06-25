@@ -9,8 +9,6 @@ from PIL import Image
 from tqdm import tqdm
 from torchvision.ops import nms
 from pycocotools.coco import COCO
-from thop import profile
-from thop import clever_format
 
 # 自定义模块
 from utils.metrics import *
@@ -132,9 +130,9 @@ class Test():
         pred_json_path = pred_json_name
         # 是否导入权重
         if ckpt_path != None:
-            print(ckpt_path)
-            # self.model.load_state_dict(torch.load(ckpt_path))
-            self.model = loadWeightsBySizeMatching(self.model, ckpt_path)
+            print('load_ckpt: ', ckpt_path)
+            self.model.load_state_dict(torch.load(ckpt_path))
+            # self.model = loadWeightsBySizeMatching(self.model, ckpt_path)
             # 半精度推理(貌似还有问题,推理速度和全精度差不多):
             if self.half: self.model.half()
             # yolov8:
@@ -164,15 +162,7 @@ class Test():
 
         # 计算 mAP, ap_50
         mAP, ap_50 = evalCOCOmAP(json_path, pred_json_path)
-
-        '''使用thop分析模型的运算量和参数量'''
-        input_x = torch.rand(1, 3, self.img_size[0], self.img_size[1]).to(self.device)
-        flops, params = profile(self.model, inputs=(input_x,))
-        # 将结果转换为更易于阅读的格式
-        flops, params = clever_format([flops, params], '%.3f')
-        print(f"FLOPs↓: {flops}, 参数量↓: {params}")
         return mAP, ap_50
-
 
 
 
