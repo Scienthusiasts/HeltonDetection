@@ -23,7 +23,9 @@
 - eval时添加了FlOPs和模型参数量Params指标
 - 添加了`utils\otherUtils\eval_yolov5_by_pycocotools.py`用于对Ultralytics官方提供的YOLOv5模型进行评估
 
+**24/6/26 更新 :**
 
+- **支持pytorch DDP多GPU分布式训练！** 并调整了相关代码逻辑，支持单卡/多卡训练
 
 ## Demo
 
@@ -31,7 +33,7 @@
 
 ![2](https://github.com/Scienthusiasts/HeltonDetection/blob/dev/demo/2.jpg)
 
-
+![3](https://github.com/Scienthusiasts/HeltonDetection/blob/dev/demo/3.jpg)
 
 ## Environments
 
