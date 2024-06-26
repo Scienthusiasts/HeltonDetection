@@ -4,7 +4,9 @@ import torch
 from tqdm import tqdm
 import torch.backends.cudnn as cudnn
 from torch.utils.tensorboard import SummaryWriter
-
+# 多卡并行训练:
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
 # 自定义模块
 from test import Test
 from utils.util import *
@@ -76,14 +78,19 @@ class Runner():
         self.reverse_map = reverse_map
         '''GPU/CPU'''
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # NOTE:多卡:
+        if self.mode=='train_ddp':
+            dist.init_process_group('nccl')
+            self.local_rank = dist.get_rank()
+
         '''日志模块'''
-        if mode in ['train', 'eval']:
+        if mode in ['train', 'train_ddp', 'eval']:
             self.logger, self.log_dir, self.log_save_path = myLogger(self.mode, self.log_dir)
             '''训练/验证时参数记录模块'''
             json_save_dir, _ = os.path.split(self.log_save_path)
             self.argsHistory = ArgsHistory(json_save_dir)
         '''导入数据集'''
-        if self.mode in ['train', 'eval']:
+        if self.mode in ['train', 'train_ddp', 'eval']:
             self.train_data, \
             self.train_data_loader, \
             self.val_json_path, \
@@ -94,24 +101,33 @@ class Runner():
         # 根据模型名称动态导入模块
         self.model = dynamic_import_class(model.pop('path'), 'Model')(**model).to(self.device)
         cudnn.benchmark = True
-            
+
+        '''是否恢复断点训练'''
+        self.start_epoch = 0
+        if self.resume and self.mode in ['train', 'train_ddp']:
+            trainResume(self.resume, self.model, self.optimizer, self.logger, self.argsHistory)
+
+        # NOTE:多卡:
+        if self.mode=='train_ddp':
+            self.model = nn.parallel.DistributedDataParallel(self.model.cuda(self.local_rank), device_ids=[self.local_rank])
 
         '''定义优化器(自适应学习率的带动量梯度下降方法)'''
-        if mode == 'train':
+        if mode in ['train', 'train_ddp']:
             self.optimizer, self.scheduler = optimSheduler(**optimizer, 
                                                            model=self.model, 
                                                            total_epoch=self.epoch, 
                                                            train_data_loader=self.train_data_loader)
-        '''是否恢复断点训练'''
-        self.start_epoch = 0
-        if self.resume and self.mode=='train':
-            trainResume(self.resume, self.model, self.optimizer, self.logger, self.argsHistory)
+
         '''导入评估模块'''
-        self.test = Test(dataset['my_dataset']['path'], self.model, self.img_size, self.class_names, self.device, **test)
+        if self.mode =='train_ddp':
+            # NOTE:多卡:
+            self.test = Test(dataset['my_dataset']['path'], self.model.module, self.img_size, self.class_names, self.device, **test)
+        elif self.mode =='train':
+            self.test = Test(dataset['my_dataset']['path'], self.model, self.img_size, self.class_names, self.device, **test)
         '''打印训练参数'''
-        if self.mode in ['train', 'eval']:
+        if self.mode in ['train', 'train_ddp', 'eval']:
             val_data_len = self.val_data.__len__()
-            train_data_len = self.train_data.__len__() if self.mode=='train' else 0
+            train_data_len = self.train_data.__len__() if self.mode in ['train', 'train_ddp'] else 0
             printRunnerArgs(
                 backbone_name=model['backbone_name'], 
                 mode=self.mode, 
@@ -147,7 +163,10 @@ class Runner():
             - total_loss:  所有损失之和
         '''
         # 一个batch的前向传播+计算损失
-        losses = self.model.batchLoss(self.device, self.img_size, batch_datas)
+        if self.mode=='train_ddp':
+            losses = self.model.module.batchLoss(self.local_rank, self.img_size, batch_datas)
+        else:
+            losses = self.model.batchLoss(self.device, self.img_size, batch_datas)
         # 将上一次迭代计算的梯度清零
         self.optimizer.zero_grad()
         # 反向传播
@@ -166,6 +185,10 @@ class Runner():
         '''
         self.model.train()
         train_batch_num = len(self.train_data_loader)
+        # NOTE:多卡
+        # 通过维持各个进程之间的相同随机数种子使不同进程能获得同样的shuffle效果
+        if self.mode=='train_ddp':
+            self.train_data_loader.sampler.set_epoch(epoch)
         for step, batch_datas in enumerate(self.train_data_loader):
             '''一个batch的训练, 并得到损失'''
             losses = self.fitBatch(step, train_batch_num, epoch, batch_datas)
@@ -179,8 +202,10 @@ class Runner():
                 epoch=epoch, 
                 batch_num=train_batch_num, 
                 losses=losses)
-            '''记录变量(loss, lr等, 每个iter都记录)'''
-            recoardArgs(mode='train', optimizer=self.optimizer, argsHistory=self.argsHistory, loss=losses)
+            # NOTE:多卡
+            if self.mode=='train' or (self.mode=='train_ddp' and dist.get_rank() == 0):
+                '''记录变量(loss, lr等, 每个iter都记录)'''
+                recoardArgs(mode='train', optimizer=self.optimizer, argsHistory=self.argsHistory, loss=losses)
 
 
 
@@ -205,32 +230,40 @@ class Runner():
         for epoch in range(self.start_epoch, self.epoch):
             '''一个epoch的训练'''
             self.fitEpoch(epoch)
-            '''以json格式保存args'''
-            self.argsHistory.saveRecord()
-            '''一个epoch的验证'''
-            self.evaler(epoch)
-            if epoch % self.eval_interval == 0 and (epoch!=0 or self.eval_interval==1):
-                '''打印日志(一个epoch结束)'''
-                printLog(mode='epoch', logger=self.logger, argsHistory=self.argsHistory, step=0, epoch=epoch)
-                '''保存网络权重(一个epoch结束)'''
-                saveCkpt(epoch, self.model, self.optimizer, self.scheduler, self.log_dir, self.argsHistory, self.logger)
+            # 同步所有进程确保训练完全完成(类似阻塞)
+            if self.mode=='train_ddp':dist.barrier()
+            # NOTE:多卡
+            if self.mode=='train' or (self.mode=='train_ddp' and dist.get_rank() == 0):
+                '''以json格式保存args'''
+                self.argsHistory.saveRecord()
+                '''一个epoch的验证'''
+                self.evaler(epoch, self.model.module) if self.mode=='train_ddp' else self.evaler(epoch, self.model)
+                if epoch % self.eval_interval == 0 and (epoch!=0 or self.eval_interval==1):
+                    '''打印日志(一个epoch结束)'''
+                    printLog(mode='epoch', logger=self.logger, argsHistory=self.argsHistory, step=0, epoch=epoch)
+                    '''保存网络权重(一个epoch结束)'''
+                    if self.mode=='train':
+                        saveCkpt(epoch, self.model, self.optimizer, self.scheduler, self.log_dir, self.argsHistory, self.logger)
+                    elif self.mode=='train_ddp':
+                        saveCkpt(epoch, self.model.module, self.optimizer, self.scheduler, self.log_dir, self.argsHistory, self.logger)
+
+            # 可以考虑在此处再次同步，确保主进程的评估和日志记录不会被后续的训练步骤干扰(类似阻塞)
+            if self.mode=='train_ddp':dist.barrier()
 
 
 
 
-
-
-    def evaler(self, epoch, inferring=True, pred_json_name='eval_tmp.json', ckpt_path=None, T=0.01, fuse=False):
+    def evaler(self, epoch, model, inferring=True, pred_json_name='eval_tmp.json', ckpt_path=None, T=0.01, fuse=False):
         '''一个epoch的验证(验证集)
         '''
         if (epoch % self.eval_interval == 0 and (epoch!=0 or self.eval_interval==1)) or self.mode=='eval':
             '''在验证集上评估并计算AP'''
             # self.valEpoch(T, agnostic=False, vis_heatmap=False, save_vis_path=None, half=False)
             # 采用一张图一张图遍历的方式,并生成评估结果json文件
-            mAP, ap_50 = self.test.genPredJsonAndEval(self.val_json_path, self.val_img_dir, self.log_dir, pred_json_name, T=T, model=self.model, inferring=inferring, ckpt_path=ckpt_path, reverse_map=self.reverse_map, fuse=fuse)
+            mAP, ap_50 = self.test.genPredJsonAndEval(self.val_json_path, self.val_img_dir, self.log_dir, pred_json_name, T=T, model=model, inferring=inferring, ckpt_path=ckpt_path, reverse_map=self.reverse_map, fuse=fuse)
             '''最后一个epoch计算模型参数量, FLOPs'''
             if epoch == self.epoch:
-                computeParamFLOPs(self.device, self.model, self.img_size)
+                computeParamFLOPs(self.device, model, self.img_size)
             '''记录变量'''
             recoardArgs(mode='epoch', argsHistory=self.argsHistory, mAP=mAP, ap_50=ap_50)
             if self.mode == 'eval':            

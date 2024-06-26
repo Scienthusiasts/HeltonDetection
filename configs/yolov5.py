@@ -1,7 +1,7 @@
 import os
 
-# train eval test export 
-MODE = 'eval'
+# train train_ddp eval test export 
+MODE = 'train'
 # mobilenetv3_large_100.ra_in1k  resnet50.a1_in1k  darknetaa53.c2ns_in1k cspdarknet53.ra_in1k cspresnext50.ra_in1k
 FROZEBACKBONE = True
 # log_yolov5_VOC_mosaic_0.5_focalloss_obj_root_cls  log_yolov5_VOC_mosaic_0.5_focalloss_root_obj_root_cls_balance_4_1_0.4 
@@ -10,9 +10,9 @@ PHI = 's'
 # 'last.pt' 
 # log/yolo/log_yolov5{PHI}_DOTAhv1.0_root_focalloss/best_mAP.pt
 # yolov5_s_v6.1.pth
-TESTCKPT = f"log/yolov5/log_yolov5{PHI}_COCO_mosaic_0.5/best_AP50.pt"
 BACKBONE = f'ckpt/cspdarknet_{PHI}_v6.1_backbone.pth'
-LOADCKPT = f"log/yolov5/log_yolov5{PHI}_COCO_mosaic_0.5/best_AP50.pt"
+LOADCKPT = f"../HD_ckpt/yolov5{PHI}/COCO2017/bs16_lr1e-3_mosaic0.5/best_AP50.pt"
+TESTCKPT = f"../HD_ckpt/yolov5{PHI}/COCO2017/bs16_lr1e-3_mosaic0.5/best_AP50.pt"
 RESUME = False
 TTA = [[640,640], [832,832], [960,960]]
 TTAOPEN = False
@@ -21,8 +21,7 @@ MASK = [[0,1,2], [3,4,5], [6,7,8]]
 onnx_export_dir = os.path.join('onnx_ckpt', TESTCKPT.split('/')[1])
 onnx_export_name = f"{TESTCKPT.split('/')[-2]}.onnx"
 
-TESTCKPT = "last.pt"
-LOADCKPT = "last.pt"
+
 '''VOC'''
 # CATNUMS = 20
 # IMGSIZE = [640, 640]
@@ -191,7 +190,7 @@ test = dict(
     # "E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/val/images/P0019__1024__4608___0.png" P0086__1024__0___0.png 
     # P0168__1024__1024___512.png P0262__1024__512___0.png P0476__1024__122___205.png P0660__1024__136___0.png
     # P0833__1024__617___0.png
-    img_path = "E:/datasets/Universal/COCO2017/COCO/val2017/000000000139.jpg",
+    img_path = "samples/imgs/1956_1.jpg",
     save_vis_path = './samples/imgs/res1.jpg',
     # video
     # img_path = "./samples/videos/cars_people.mp4",

@@ -1,10 +1,10 @@
-import onnx
+# import onnx
 import torch
 import os
 from torch import nn
-import onnxruntime
+# import onnxruntime
 # onnx-simplifier
-import onnxsim
+# import onnxsim
 
 from utils.runnerUtils import *
 

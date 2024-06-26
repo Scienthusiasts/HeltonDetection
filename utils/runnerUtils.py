@@ -16,6 +16,10 @@ import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
 from timm.scheduler import CosineLRScheduler
 from torch.utils.tensorboard import SummaryWriter
+# 多卡并行训练:
+import torch.distributed as dist
+from torch.utils.data.distributed import DistributedSampler
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 # 自定义模块
 from utils.util import *
@@ -82,6 +86,8 @@ def getArgs():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--config', type=str, help='config file')
+    parser.add_argument("--local_rank", default=-1, type=int)
+    parser.add_argument('--n_gpus', default=1, type=int)
     args = parser.parse_args()
     return args
 
@@ -120,20 +126,33 @@ def loadDatasets(mode:str, seed:int, bs:int, num_workers:int, my_dataset:dict):
     if dataset_type == 'WSDDNDataset':
         from datasets.WSDDNDataset import COCODataset
 
-    # 导入验证集
+    '''导入验证集'''
     val_json_path = my_dataset['val_dataset']['annPath']
     val_img_dir = my_dataset['val_dataset']['imgDir']
     # 固定每个方法里都有一个COCODataset
     val_data = COCODataset(**my_dataset['val_dataset'])
-    val_data_loader = DataLoader(val_data, shuffle=False, batch_size=bs, num_workers=num_workers, pin_memory=True, 
-                                collate_fn=COCODataset.dataset_collate, worker_init_fn=partial(COCODataset.worker_init_fn, seed=seed))   
+    if mode == 'train':
+        val_data_loader = DataLoader(val_data, shuffle=False, batch_size=bs, num_workers=num_workers, pin_memory=True, 
+                                    collate_fn=COCODataset.dataset_collate, worker_init_fn=partial(COCODataset.worker_init_fn, seed=seed)) 
+    # NOTE: 多卡 
+    elif mode == 'train_ddp':
+        val_sampler = DistributedSampler(val_data)
+        val_data_loader = DataLoader(val_data, sampler=val_sampler, batch_size=bs, num_workers=num_workers, pin_memory=True, 
+                                    collate_fn=COCODataset.dataset_collate, worker_init_fn=partial(COCODataset.worker_init_fn, seed=seed))  
     if mode == 'eval':
         return None, None, val_json_path, val_img_dir, val_data, val_data_loader
+    
+    '''导入训练集'''
     if mode == 'train':
-        # 导入训练集
         train_data = COCODataset(**my_dataset['train_dataset'])
-        train_data_loader = DataLoader(train_data, shuffle=True, batch_size=bs, num_workers=num_workers, pin_memory=True,
-                                        collate_fn=COCODataset.dataset_collate, worker_init_fn=partial(COCODataset.worker_init_fn, seed=seed))
+        if mode == 'train':
+            train_data_loader = DataLoader(train_data, shuffle=True, batch_size=bs, num_workers=num_workers, pin_memory=True,
+                                            collate_fn=COCODataset.dataset_collate, worker_init_fn=partial(COCODataset.worker_init_fn, seed=seed))
+        # NOTE: 多卡
+        elif mode == 'train_ddp':
+            train_sampler = DistributedSampler(train_data)
+            train_data_loader = DataLoader(train_data, sampler=train_sampler, batch_size=bs, num_workers=num_workers, pin_memory=True, 
+                                        collate_fn=COCODataset.dataset_collate, worker_init_fn=partial(COCODataset.worker_init_fn, seed=seed))  
         return train_data, train_data_loader, val_json_path, val_img_dir, val_data, val_data_loader
 
 
@@ -216,21 +235,21 @@ def saveCkpt(
     # checkpoint_dict能够恢复断点训练
     checkpoint_dict = {
         'epoch': epoch, 
-        'model_state_dict': model.state_dict(), 
+        'model_state_dict': model.module.state_dict(), 
         'optim_state_dict': optimizer.state_dict(),
         'sched_state_dict': scheduler.state_dict()
         }
     torch.save(checkpoint_dict, os.path.join(log_dir, f"epoch_{epoch}.pt"))
-    torch.save(model.state_dict(), os.path.join(log_dir, "last.pt"))
+    torch.save(model.module.state_dict(), os.path.join(log_dir, "last.pt"))
     # 如果本次Epoch的val AP50最大，则保存参数(网络权重)
     AP50_list = argsHistory.args_history_dict['val_mAP@.5']
     if epoch == AP50_list.index(max(AP50_list)):
-        torch.save(model.state_dict(), os.path.join(log_dir, 'best_AP50.pt'))
+        torch.save(model.module.state_dict(), os.path.join(log_dir, 'best_AP50.pt'))
         logger.info('best checkpoint(AP50) has saved !')
     # 如果本次Epoch的val mAP最大，则保存参数(网络权重)
     mAP_list = argsHistory.args_history_dict['val_mAP@.5:.95']
     if epoch == mAP_list.index(max(mAP_list)):
-        torch.save(model.state_dict(), os.path.join(log_dir, 'best_mAP.pt'))
+        torch.save(model.module.state_dict(), os.path.join(log_dir, 'best_mAP.pt'))
         logger.info('best checkpoint(mAP) has saved !')
 
 
@@ -268,15 +287,22 @@ def myLogger(mode:str, log_dir:str):
             # 日志文件保存路径
         log_save_path = os.path.join(log_dir, f"{datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}_val.log")
     if not os.path.isdir(log_dir):os.makedirs(log_dir)
-    file_handler = logging.FileHandler(log_save_path, encoding="utf-8", mode="a")
-    file_handler.setLevel(level=logging.INFO)
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-    # 终端输出的日志
-    stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging.INFO)
-    stream_handler.setFormatter(formatter)
-    logger.addHandler(stream_handler)
+    # NOTE:多卡
+    # 只在 local_rank 为 0 的进程中设置日志记录
+    if mode == 'train' or (mode == 'train_ddp' and dist.get_rank() == 0):
+        file_handler = logging.FileHandler(log_save_path, encoding="utf-8", mode="a")
+        file_handler.setLevel(level=logging.INFO)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+        # 终端输出的日志
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.INFO)
+        stream_handler.setFormatter(formatter)
+        logger.addHandler(stream_handler)
+    # 对于非主进程，可以设置一个空的日志处理器来忽略日志记录
+    else:
+        logger.addHandler(logging.NullHandler())
+
     return logger, log_dir, log_save_path
 
 

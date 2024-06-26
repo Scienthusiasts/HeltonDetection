@@ -15,7 +15,7 @@ from torch import nn
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 from matplotlib.patches import Polygon, Rectangle
-from ensemble_boxes import weighted_boxes_fusion as wbf
+# from ensemble_boxes import weighted_boxes_fusion as wbf
 
 from datasets.preprocess import Transform
 
@@ -424,6 +424,76 @@ def inferenceVideo(model, device, class_names, image2color, img_size, tf, video_
 
 
 
+
+
+
+
+class TTA():
+    '''Test Time Augmentation + WBF策略
+    '''
+
+    def __init__(self, tta_img_size=[[640,640], [832,832], [960,960]]):
+        self.tta_img_size = tta_img_size
+        self.tta_transform = [Transform(img_size, box_format='coco') for img_size in self.tta_img_size]        
+
+
+    def infer(self,
+               model, 
+               image:np.array, 
+               device, 
+               T, 
+               image2color, 
+               agnostic=False, 
+               vis_heatmap=False, 
+               save_vis_path=None, 
+               half=False, 
+               tta=True
+               ):
+        flip_image = cv2.flip(image, 1)
+        # n个尺度, 每个尺度2个增强, 一共2n张图
+        tta_boxes, tta_box_scores, tta_box_classes = [], [], []
+        # 每张图像分别推理:
+        for i in range(len(self.tta_img_size)):
+            for j in range(2):
+                img = image if j==0 else flip_image
+                boxes, box_scores, box_classes = model.infer(
+                    img, 
+                    self.tta_img_size[i], 
+                    self.tta_transform[i], 
+                    device, 
+                    T, 
+                    image2color, 
+                    agnostic, 
+                    False, 
+                    save_vis_path, 
+                    half=half, 
+                    tta=tta
+                    )
+                if len(boxes) > 0:
+                    # 归一化(wbf只接受归一化输入)
+                    boxes[:, [0,2]] /= image.shape[1]
+                    boxes[:, [1,3]] /= image.shape[0]
+                    # 水平翻转的图像翻转回来
+                    if j == 1: 
+                        boxes[:, [0, 2]] = 1 - boxes[:, [2, 0]]
+                tta_boxes.append(boxes)
+                tta_box_scores.append(box_scores)
+                tta_box_classes.append(box_classes)
+        '''不同增强下的预测结果执行WBF'''
+        tta_boxes, tta_box_scores, tta_box_classes = wbf(
+            tta_boxes, 
+            tta_box_scores, 
+            tta_box_classes, 
+            weights=[1]*2*len(self.tta_img_size), 
+            iou_thr=0.55, 
+            skip_box_thr=T
+            )
+        if len(tta_boxes) == 0 : return [],[],[]
+        # 坐标再映射回原图大小
+        tta_boxes[:, [0,2]] *= image.shape[1]
+        tta_boxes[:, [1,3]] *= image.shape[0]
+        return tta_boxes, tta_box_scores, tta_box_classes.astype(int)
+    
 
 
 
