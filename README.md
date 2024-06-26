@@ -8,6 +8,7 @@
 - FasterRCNN-FPN(FPN, PAFPN(YOLOv8), Decoupled-Head, 可更换Backbone, 或自定义neck, head和其中的组件)
 - YOLOv5(PAFPN(YOLOv5), 可更换Backbone, 或自定义neck, head和其中的组件)
 - COCO格式数据集读取, YOLO格式数据集读取(eval未实现), DOTA格式旋转框数据集读取(debug中), 丰富的数据增强方法
+- 实现 训练/评估/测试/数据读取/网络前向代码逻辑解耦，修改方便，可自定义修改网络模块/训练策略等
 - 支持config文件配置模型、训练、评估、测试超参，命令行一键训练/评估/测试
 - 支持warmup+余弦学习率衰减策略
 - 支持logger， tensorboard等日志记录方式
