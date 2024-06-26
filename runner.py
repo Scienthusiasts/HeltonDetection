@@ -1,5 +1,6 @@
 # coding=utf-8
 import os
+import shutil
 import torch
 from tqdm import tqdm
 import torch.backends.cudnn as cudnn
@@ -313,7 +314,9 @@ if __name__ == '__main__':
 
     runner = Runner(**runner_config)
     # 训练模式
-    if runner_config['mode'] == 'train':
+    if runner_config['mode'] in ['train', 'train_ddp']:
+        # 拷贝一份当前训练对应的config文件(方便之后查看细节)
+        shutil.copy(config_path, os.path.join(runner.log_dir, 'config.py'))
         runner.trainer()
     # 验证模式
     elif runner_config['mode'] == 'eval':

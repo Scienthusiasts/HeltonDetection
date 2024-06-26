@@ -143,13 +143,12 @@ def loadDatasets(mode:str, seed:int, bs:int, num_workers:int, my_dataset:dict):
         return None, None, val_json_path, val_img_dir, val_data, val_data_loader
     
     '''导入训练集'''
-    if mode == 'train':
+    if mode in ['train', 'train_ddp']:
         train_data = COCODataset(**my_dataset['train_dataset'])
-        if mode == 'train':
-            train_data_loader = DataLoader(train_data, shuffle=True, batch_size=bs, num_workers=num_workers, pin_memory=True,
-                                            collate_fn=COCODataset.dataset_collate, worker_init_fn=partial(COCODataset.worker_init_fn, seed=seed))
+        train_data_loader = DataLoader(train_data, shuffle=True, batch_size=bs, num_workers=num_workers, pin_memory=True,
+                                        collate_fn=COCODataset.dataset_collate, worker_init_fn=partial(COCODataset.worker_init_fn, seed=seed))
         # NOTE: 多卡
-        elif mode == 'train_ddp':
+        if mode == 'train_ddp':
             train_sampler = DistributedSampler(train_data)
             train_data_loader = DataLoader(train_data, sampler=train_sampler, batch_size=bs, num_workers=num_workers, pin_memory=True, 
                                         collate_fn=COCODataset.dataset_collate, worker_init_fn=partial(COCODataset.worker_init_fn, seed=seed))  
@@ -276,7 +275,7 @@ def myLogger(mode:str, log_dir:str):
     # 日志格式
     formatter = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')
 
-    if mode == 'train':
+    if mode in ['train', 'train_ddp']:
         # 写入文件的日志
         log_dir = os.path.join(log_dir, f"{datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}_train")
         # 日志文件保存路径
@@ -298,7 +297,7 @@ def myLogger(mode:str, log_dir:str):
         stream_handler = logging.StreamHandler()
         stream_handler.setLevel(logging.INFO)
         stream_handler.setFormatter(formatter)
-        logger.addHandler(stream_handler)
+        # logger.addHandler(stream_handler)
     # 对于非主进程，可以设置一个空的日志处理器来忽略日志记录
     else:
         logger.addHandler(logging.NullHandler())
@@ -379,15 +378,19 @@ def printRunnerArgs(
         logger:Logger):
     '''训练前打印基本信息
     '''
-    if mode in ['train', 'eval']:
+    if mode in ['train', 'train_ddp', 'eval']:
         logger.info(f'CPU/CUDA:   {device}')
+        logger.info(f'训练模式:   {mode}')
         logger.info(f'骨干网络: {backbone_name}')
         logger.info(f'全局种子: {seed}')
         logger.info(f'图像大小:   {img_size}')
         logger.info('验证集大小:   %d' % val_data_len)
         logger.info('数据集类别数: %d' % cat_nums)
-        if mode == 'train':
-            logger.info(f'Batch Size: {bs}')
+        if mode in ['train', 'train_ddp']:
+            if mode == 'train_ddp':
+                logger.info(f'Single GPU Batch Size: {bs}')
+            else:
+                logger.info(f'Batch Size: {bs}')
             logger.info('训练集大小:   %d' % train_data_len)
             logger.info(f'优化器: {optimizer}')
 
