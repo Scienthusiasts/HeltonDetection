@@ -315,10 +315,10 @@ def inferenceSingleImg(model, device, class_names, image2color, img_size, tf, im
     image = np.array(image)
     '''推理一张图像'''
     if tta:
-        boxes, box_scores, box_classes = model.tta.infer(model, np.array(image), device, T, image2color, agnostic, vis_heatmap, save_vis_path, half=half)
+        boxes, box_scores, box_classes = model.tta.infer(model, image, device, T, image2color, agnostic, vis_heatmap, save_vis_path, half=half)
     else:
         # xyxy
-        boxes, box_scores, box_classes = model.infer(np.array(image), img_size, tf, device, T, image2color, agnostic, vis_heatmap, save_vis_path, half=half)
+        boxes, box_scores, box_classes = model.infer(image, img_size, tf, device, T, image2color, agnostic, vis_heatmap, save_vis_path, half=half)
     #  检测出物体才继续    
     if len(boxes) == 0: 
         print(f'no objects in image: {img_path}.')

@@ -87,9 +87,9 @@ class Runner():
         '''日志模块'''
         if mode in ['train', 'train_ddp', 'eval']:
             self.logger, self.log_dir, self.log_save_path = myLogger(self.mode, self.log_dir)
-            '''训练/验证时参数记录模块'''
             json_save_dir, _ = os.path.split(self.log_save_path)
-            self.argsHistory = ArgsHistory(json_save_dir)
+            '''训练/验证时参数记录模块'''
+            self.argsHistory = ArgsHistory(json_save_dir, self.mode)
         '''导入数据集'''
         if self.mode in ['train', 'train_ddp', 'eval']:
             self.train_data, \
@@ -110,7 +110,9 @@ class Runner():
 
         # NOTE:多卡:
         if self.mode=='train_ddp':
-            self.model = nn.parallel.DistributedDataParallel(self.model.cuda(self.local_rank), device_ids=[self.local_rank])
+            self.model = nn.parallel.DistributedDataParallel(self.model.cuda(self.local_rank), device_ids=[self.local_rank], find_unused_parameters=True)
+            # 多卡时同步BN
+            self.model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(self.model)
 
         '''定义优化器(自适应学习率的带动量梯度下降方法)'''
         if mode in ['train', 'train_ddp']:
@@ -123,10 +125,11 @@ class Runner():
         if self.mode =='train_ddp':
             # NOTE:多卡:
             self.test = Test(dataset['my_dataset']['path'], self.model.module, self.img_size, self.class_names, self.device, **test)
-        elif self.mode =='train':
+        else:
             self.test = Test(dataset['my_dataset']['path'], self.model, self.img_size, self.class_names, self.device, **test)
         '''打印训练参数'''
-        if self.mode in ['train', 'train_ddp', 'eval']:
+        # NOTE:多卡:
+        if self.mode in ['train', 'eval'] or (self.mode=='train_ddp' and dist.get_rank() == 0):
             val_data_len = self.val_data.__len__()
             train_data_len = self.train_data.__len__() if self.mode in ['train', 'train_ddp'] else 0
             printRunnerArgs(
@@ -193,18 +196,18 @@ class Runner():
         for step, batch_datas in enumerate(self.train_data_loader):
             '''一个batch的训练, 并得到损失'''
             losses = self.fitBatch(step, train_batch_num, epoch, batch_datas)
-            '''打印日志'''
-            printLog(
-                mode='train', 
-                log_interval=self.log_interval, 
-                logger=self.logger, 
-                optimizer=self.optimizer, 
-                step=step, 
-                epoch=epoch, 
-                batch_num=train_batch_num, 
-                losses=losses)
             # NOTE:多卡
             if self.mode=='train' or (self.mode=='train_ddp' and dist.get_rank() == 0):
+                '''打印日志'''
+                printLog(
+                    mode='train', 
+                    log_interval=self.log_interval, 
+                    logger=self.logger, 
+                    optimizer=self.optimizer, 
+                    step=step, 
+                    epoch=epoch, 
+                    batch_num=train_batch_num, 
+                    losses=losses)
                 '''记录变量(loss, lr等, 每个iter都记录)'''
                 recoardArgs(mode='train', optimizer=self.optimizer, argsHistory=self.argsHistory, loss=losses)
 
@@ -254,9 +257,11 @@ class Runner():
 
 
 
-    def evaler(self, epoch, model, inferring=True, pred_json_name='eval_tmp.json', ckpt_path=None, T=0.01, fuse=False):
+    def evaler(self, epoch, model=False, inferring=True, pred_json_name='eval_tmp.json', ckpt_path=None, T=0.01, fuse=False):
         '''一个epoch的验证(验证集)
         '''
+        if model == False:
+            model=self.model
         if (epoch % self.eval_interval == 0 and (epoch!=0 or self.eval_interval==1)) or self.mode=='eval':
             '''在验证集上评估并计算AP'''
             # self.valEpoch(T, agnostic=False, vis_heatmap=False, save_vis_path=None, half=False)

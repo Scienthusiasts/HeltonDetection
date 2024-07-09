@@ -212,8 +212,8 @@ class BaseDataset(Dataset):
     # DataLoader中worker_init_fn参数使
     # 为每个 worker 设置了一个基于初始种子和 worker ID 的独特的随机种子, 这样每个 worker 将产生不同的随机数序列，从而有助于数据加载过程的随机性和多样性
     @staticmethod
-    def worker_init_fn(worker_id, seed):
-        worker_seed = worker_id + seed
+    def worker_init_fn(worker_id, seed, rank=0):
+        worker_seed = rank + seed
         random.seed(worker_seed)
         np.random.seed(worker_seed)
         torch.manual_seed(worker_seed)
@@ -322,7 +322,7 @@ class COCODataset(BaseDataset):
         labels, boxes = [], []
         for ann in anns:
             # 过滤掉稠密聚集的标注框
-            # if ann['iscrowd'] == 1: continue
+            if ann['iscrowd'] == 1: continue
             # if ann['ignore'] == 1: continue
             labelName = ann['category_id']
             labels.append(labelName)

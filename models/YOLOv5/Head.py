@@ -105,10 +105,11 @@ class YOLOv5Head(nn.Module):
             box_loss += loss_box
             cls_loss += loss_cls
             total_loss += loss_box * self.box_ratio + loss_cls * self.cls_ratio
-
+            # obj正样本对应位置的预测值设置为这个位置的预测框与GT的giou
+            tobj = torch.where(y_true[..., 4] == 1, giou.detach().clamp(0), torch.zeros_like(y_true[..., 4]))
+        else:
+            tobj = torch.zeros_like(y_true[..., 4])
         '''目标损失(当前网格是否有目标)'''
-        # obj正样本对应位置的预测值设置为这个位置的预测框与GT的giou
-        tobj = torch.where(y_true[..., 4] == 1, giou.detach().clamp(0), torch.zeros_like(y_true[..., 4]))
         if self.obj_loss_type == 'BCELoss':
             obj_loss = self.clsLoss(conf, tobj)
         if self.obj_loss_type == 'FocalLoss':

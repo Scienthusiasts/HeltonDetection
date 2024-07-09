@@ -1,21 +1,20 @@
 import os
 
 # train eval test export
-MODE = 'export'
+MODE = 'test'
 # mobilenetv3_large_100.ra_in1k  resnet50.a1_in1k  darknetaa53.c2ns_in1k cspdarknet53.ra_in1k cspresnext50.ra_in1k
 BACKBONE = 'resnet50.a1_in1k'
 FROZEBACKBONE = True
 # log/fasterrcnn/pafpn_decoupledhead_VOC_mosaic_0.5/best_mAP.pt
-TESTCKPT = "log/fasterrcnn/pafpn_decoupledhead_COCO_mosaic_0.5/best_AP50.pt"
 MINSCALE = 8
 RESUME = False
-LOADCKPT = "log/fasterrcnn/pafpn_decoupledhead_COCO_mosaic_0.5/best_AP50.pt"
+TESTCKPT = "F:/DeskTop/git/HD_ckpt/fasterrcnn_pafpn/COCO/bs16_lr_2e-4_mosaic0.5/img_size_832/best_mAP.pt"
+LOADCKPT = "F:/DeskTop/git/HD_ckpt/fasterrcnn_pafpn/COCO/bs16_lr_2e-4_mosaic0.5/img_size_832/best_mAP.pt"
 TTA = [[640,640], [832,832], [960,960]]
 TTAOPEN = False
 S = [8, 16, 32]
 
-onnx_export_dir = os.path.join('onnx_ckpt', TESTCKPT.split('/')[1])
-onnx_export_name = f"{TESTCKPT.split('/')[-2]}.onnx"
+
 
 
 
@@ -23,7 +22,7 @@ onnx_export_name = f"{TESTCKPT.split('/')[-2]}.onnx"
 
 '''VOC'''
 # CATNUMS = 20
-# IMGSIZE = [832, 832]
+# IMGSIZE = [640, 640]
 # ANCHORS = [[[90.5097, 181.0193], [128, 128], [181.0193, 90.5097]], [[181.0193, 362.0387], [256, 256], [362.0387, 181.0193]], [[362.0387, 724.0773], [512, 512], [724.0773, 362.0387]]]
 # train_json_path = 'E:/datasets/Universal/VOC0712/VOC2007/Annotations/coco/train.json'
 # val_json_path =   'E:/datasets/Universal/VOC0712/VOC2007/Annotations/coco/test.json'
@@ -127,14 +126,10 @@ runner = dict(
             cat_nums = CATNUMS,
             inChannels = 256,
             midChannels = 256,
-            # FPN P2
+            # FPN 
             anchors = ANCHORS,
             featStride = S,
             minScale = MINSCALE,
-            # FPN
-            # featStride=[4, 8, 16, 32, 64], 
-            # scales=[8], 
-            # ratios=[0.5, 1, 2],
             mode = MODE,
         ),
         head = dict(
@@ -169,7 +164,7 @@ test = dict(
     # "E:/datasets/Univer
     # sal/COCO2017/unlabeled2017/000000001234.jpg" 2382 2000 5611 1356 1800 1808 2548 
     # E:/datasets/RemoteSensing/visdrone2019/images/test/images/0000087_00009_d_0000001.jpg
-    img_path = "./samples/imgs/12.jpg",
+    img_path = "./samples/imgs/street.jpg",
     save_vis_path = './samples/imgs/res1.jpg',
     # video
     # path = "./samples/videos/people_covered.mp4",
@@ -181,14 +176,14 @@ test = dict(
     # frcnn还没实现vis_heatmap:
     vis_heatmap = False,
     # onnx 权重路径
-    onnx_path = os.path.join(onnx_export_dir, onnx_export_name),
+    onnx_path = '',
 )
 
 
 
 export = dict(
-    export_dir = onnx_export_dir,
-    export_name = onnx_export_name,
+    export_dir = '',
+    export_name = '',
     ckpt_path = TESTCKPT,
     export_param = dict(
         # 输入 Tensor 的名称, 如果不指定，会使用默认名字

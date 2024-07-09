@@ -36,9 +36,11 @@ from utils.FasterRCNNAnchorUtils import *
 class ArgsHistory():
     '''记录train或val过程中的一些变量(比如 loss, lr等) 以及tensorboard
     '''
-    def __init__(self, json_save_dir):
-        # tensorboard 对象
-        self.tb_writer = SummaryWriter(log_dir=json_save_dir)
+    def __init__(self, json_save_dir, mode):
+        # NOTE:多卡
+        if mode in ['train', 'eval'] or (mode=='train_ddp' and dist.get_rank() == 0):
+            # tensorboard 对象
+            self.tb_writer = SummaryWriter(log_dir=json_save_dir)
         self.json_save_dir = json_save_dir
         self.args_history_dict = {}
 
@@ -131,11 +133,11 @@ def loadDatasets(mode:str, seed:int, bs:int, num_workers:int, my_dataset:dict):
     val_img_dir = my_dataset['val_dataset']['imgDir']
     # 固定每个方法里都有一个COCODataset
     val_data = COCODataset(**my_dataset['val_dataset'])
-    if mode == 'train':
+    if mode != 'train_ddp':
         val_data_loader = DataLoader(val_data, shuffle=False, batch_size=bs, num_workers=num_workers, pin_memory=True, 
                                     collate_fn=COCODataset.dataset_collate, worker_init_fn=partial(COCODataset.worker_init_fn, seed=seed)) 
     # NOTE: 多卡 
-    elif mode == 'train_ddp':
+    else:
         val_sampler = DistributedSampler(val_data)
         val_data_loader = DataLoader(val_data, sampler=val_sampler, batch_size=bs, num_workers=num_workers, pin_memory=True, 
                                     collate_fn=COCODataset.dataset_collate, worker_init_fn=partial(COCODataset.worker_init_fn, seed=seed))  
@@ -144,14 +146,20 @@ def loadDatasets(mode:str, seed:int, bs:int, num_workers:int, my_dataset:dict):
     
     '''导入训练集'''
     if mode in ['train', 'train_ddp']:
+        # NOTE: 多卡 
+        if mode=='train':
+            rank = 0 
+        else:
+            rank = dist.get_rank()
+
         train_data = COCODataset(**my_dataset['train_dataset'])
         train_data_loader = DataLoader(train_data, shuffle=True, batch_size=bs, num_workers=num_workers, pin_memory=True,
-                                        collate_fn=COCODataset.dataset_collate, worker_init_fn=partial(COCODataset.worker_init_fn, seed=seed))
+                                        collate_fn=COCODataset.dataset_collate, worker_init_fn=partial(COCODataset.worker_init_fn, seed=seed, rank=rank))
         # NOTE: 多卡
         if mode == 'train_ddp':
             train_sampler = DistributedSampler(train_data)
             train_data_loader = DataLoader(train_data, sampler=train_sampler, batch_size=bs, num_workers=num_workers, pin_memory=True, 
-                                        collate_fn=COCODataset.dataset_collate, worker_init_fn=partial(COCODataset.worker_init_fn, seed=seed))  
+                                        collate_fn=COCODataset.dataset_collate, worker_init_fn=partial(COCODataset.worker_init_fn, seed=seed, rank=rank))  
         return train_data, train_data_loader, val_json_path, val_img_dir, val_data, val_data_loader
 
 
@@ -234,21 +242,21 @@ def saveCkpt(
     # checkpoint_dict能够恢复断点训练
     checkpoint_dict = {
         'epoch': epoch, 
-        'model_state_dict': model.module.state_dict(), 
+        'model_state_dict': model.state_dict(), 
         'optim_state_dict': optimizer.state_dict(),
         'sched_state_dict': scheduler.state_dict()
         }
     torch.save(checkpoint_dict, os.path.join(log_dir, f"epoch_{epoch}.pt"))
-    torch.save(model.module.state_dict(), os.path.join(log_dir, "last.pt"))
+    torch.save(model.state_dict(), os.path.join(log_dir, "last.pt"))
     # 如果本次Epoch的val AP50最大，则保存参数(网络权重)
     AP50_list = argsHistory.args_history_dict['val_mAP@.5']
     if epoch == AP50_list.index(max(AP50_list)):
-        torch.save(model.module.state_dict(), os.path.join(log_dir, 'best_AP50.pt'))
+        torch.save(model.state_dict(), os.path.join(log_dir, 'best_AP50.pt'))
         logger.info('best checkpoint(AP50) has saved !')
     # 如果本次Epoch的val mAP最大，则保存参数(网络权重)
     mAP_list = argsHistory.args_history_dict['val_mAP@.5:.95']
     if epoch == mAP_list.index(max(mAP_list)):
-        torch.save(model.module.state_dict(), os.path.join(log_dir, 'best_mAP.pt'))
+        torch.save(model.state_dict(), os.path.join(log_dir, 'best_mAP.pt'))
         logger.info('best checkpoint(mAP) has saved !')
 
 
