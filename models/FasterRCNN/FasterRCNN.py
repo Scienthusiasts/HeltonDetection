@@ -4,6 +4,7 @@ import time
 from collections import Counter
 
 from utils.metrics import *
+from utils.util import *
 from models.FasterRCNN.Backbone import *
 from models.FasterRCNN.PAFPN import *
 from models.FasterRCNN.FPN import *
@@ -43,7 +44,7 @@ class Model(nn.Module):
         '''TTA增强'''
         self.tta = TTA(tta_img_size=tta_img_size)
         # 是否导入预训练权重
-        if loadckpt!=None: 
+        if loadckpt: 
             # self.load_state_dict(torch.load(loadckpt))
             # print('yolov5 pretrain ckpt loaded!')
             # 基于尺寸的匹配方式(能克服局部模块改名加载不了的问题)
