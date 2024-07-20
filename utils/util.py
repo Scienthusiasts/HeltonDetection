@@ -15,7 +15,7 @@ from torch import nn
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 from matplotlib.patches import Polygon, Rectangle
-# from ensemble_boxes import weighted_boxes_fusion as wbf
+from ensemble_boxes import weighted_boxes_fusion as wbf
 
 from datasets.preprocess import Transform
 

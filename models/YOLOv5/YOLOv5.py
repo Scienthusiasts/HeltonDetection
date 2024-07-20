@@ -94,6 +94,7 @@ class Model(nn.Module):
 
 
 
+
     def batchVal(self, device, img_size, batch_datas, T, agnostic=False, vis_heatmap=False, save_vis_path=None, half=False):
         '''一个batch的前向流程(只评估, 不会计算损失)
 
@@ -148,7 +149,7 @@ class Model(nn.Module):
 
 
 
-
+            
     def infer(self, image:np.array, img_size, tf, device, T, image2color=None, agnostic=False, vis_heatmap=False, save_vis_path=None, half=False, tta=False):
         '''推理一张图/一帧
             # Args:

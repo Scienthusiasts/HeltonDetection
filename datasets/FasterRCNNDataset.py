@@ -107,6 +107,8 @@ class COCODataset(Dataset):
         # albumentation的图像维度得是[W,H,C]
         train_trans = self.tf.trainTF(image=image, bboxes=boxes, category_ids=labels)
         image, boxes, labels = train_trans['image'], train_trans['bboxes'], train_trans['category_ids']
+        coarsedrop_trans = self.tf.CoarseDropout(image=image)
+        image = coarsedrop_trans['image']
         # 这里的box是coco格式(xywh)
         return image, boxes, labels
         
@@ -358,7 +360,7 @@ def visBatch(dataLoader:DataLoader):
         plt.figure(figsize = (8,8))
         for idx, imgBoxLabel in enumerate(zip(images, boxes, labels)):
             img, box, label = imgBoxLabel
-            ax = plt.subplot(4,4,idx+1)
+            ax = plt.subplot(5,5,idx+1)
             img = img.numpy().transpose((1,2,0))
             # 由于在数据预处理时我们对数据进行了标准归一化，可视化的时候需要将其还原
             img = np.clip(img * std + mean, 0, 1)
@@ -394,7 +396,7 @@ if __name__ == "__main__":
     seed = 22
     seed_everything(seed)
     # BatcchSize
-    BS = 16
+    BS = 25
     # 图像尺寸
     imgSize = [800, 800]
     anchors = [[[90.5097, 181.0193], [128, 128], [181.0193, 90.5097]], [[181.0193, 362.0387], [256, 256], [362.0387, 181.0193]], [[362.0387, 724.0773], [512, 512], [724.0773, 362.0387]]]

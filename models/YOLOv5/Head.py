@@ -1,10 +1,7 @@
 import torch
 import torch.nn as nn
-from torch.nn import functional as F
 
-from utils.FasterRCNNAnchorUtils import *
 from utils.util import *
-from loss.Loss import ClassifyLoss, BBoxLoss
 from utils.YOLOAnchorUtils import *
 
 

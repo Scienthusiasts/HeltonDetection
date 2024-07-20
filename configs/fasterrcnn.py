@@ -8,8 +8,8 @@ FROZEBACKBONE = True
 # log/fasterrcnn/pafpn_decoupledhead_VOC_mosaic_0.5/best_mAP.pt
 MINSCALE = 8
 RESUME = False
-TESTCKPT = "F:/DeskTop/git/HD_ckpt/fasterrcnn_pafpn/COCO/bs16_lr_2e-4_mosaic0.5/img_size_832/best_mAP.pt"
-LOADCKPT = "F:/DeskTop/git/HD_ckpt/fasterrcnn_pafpn/COCO/bs16_lr_2e-4_mosaic0.5/img_size_832/best_mAP.pt"
+TESTCKPT = "F:/DeskTop/git/CKPT/HD_ckpt/fasterrcnn_pafpn/COCO/bs16_lr_2e-4_mosaic0.5_imgsz832_ddp/2024-07-03-23-27-04_train/best_AP50.pt"
+LOADCKPT = "F:/DeskTop/git/CKPT/HD_ckpt/fasterrcnn_pafpn/COCO/bs16_lr_2e-4_mosaic0.5_imgsz832_ddp/2024-07-03-23-27-04_train/best_AP50.pt"
 TTA = [[640,640], [832,832], [960,960]]
 TTAOPEN = False
 S = [8, 16, 32]
@@ -164,7 +164,7 @@ test = dict(
     # "E:/datasets/Univer
     # sal/COCO2017/unlabeled2017/000000001234.jpg" 2382 2000 5611 1356 1800 1808 2548 
     # E:/datasets/RemoteSensing/visdrone2019/images/test/images/0000087_00009_d_0000001.jpg
-    img_path = "./samples/imgs/street.jpg",
+    img_path = "./samples/imgs/demo.jpg",
     save_vis_path = './samples/imgs/res1.jpg',
     # video
     # path = "./samples/videos/people_covered.mp4",

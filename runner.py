@@ -103,10 +103,6 @@ class Runner():
         self.model = dynamic_import_class(model.pop('path'), 'Model')(**model).to(self.device)
         cudnn.benchmark = True
 
-        '''是否恢复断点训练'''
-        self.start_epoch = 0
-        if self.resume and self.mode in ['train', 'train_ddp']:
-            trainResume(self.resume, self.model, self.optimizer, self.logger, self.argsHistory)
 
         # NOTE:多卡:
         if self.mode=='train_ddp':
@@ -121,6 +117,11 @@ class Runner():
                                                            total_epoch=self.epoch, 
                                                            train_data_loader=self.train_data_loader)
 
+        '''是否恢复断点训练'''
+        self.start_epoch = 0
+        if self.resume and self.mode in ['train', 'train_ddp']:
+            trainResume(self.resume, self.model, self.optimizer, self.logger, self.argsHistory)
+            
         '''导入评估模块'''
         if self.mode =='train_ddp':
             # NOTE:多卡:
