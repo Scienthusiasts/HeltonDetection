@@ -28,6 +28,10 @@
 
 - **支持pytorch DDP多GPU分布式训练！** 并调整了相关代码逻辑，支持单卡/多卡训练
 
+**24/7/21 更新 :**
+
+- **创建了有向目标检测仓库，目前支持YOLOv5旋转框检测！本仓库中的有向目标检测相关代码逻辑已迁移至[HeltonRotation](https://github.com/Scienthusiasts/HeltonRotation/tree/dev)**
+
 ## Demo
 
 ![1](https://github.com/Scienthusiasts/HeltonDetection/blob/dev/demo/1.jpg)
@@ -78,10 +82,19 @@ image-size=[832, 832]
 
 image-size=[832, 832]
 
-|              Model               | Mosaic |     lr      | epoch |  bs  |  AP50(%)   | mAP50-95(%) |
-| :------------------------------: | :----: | :---------: | :---: | :--: | :--------: | :---------: |
-| FasterRCNN-PAFPNP2-DecoupledHead | **×**  | 2e-4(adamw) |  36   |  16  |   58.064   |   39.377    |
-|  FasterRCNN-PAFPN-DecoupledHead  | p=0.5  | 2e-4(adamw) |  36   |  16  | **62.182** | **42.513**  |
+|                 Model                  | Mosaic |     lr      | epoch |  bs  |  AP50(%)   | mAP50-95(%) |
+| :------------------------------------: | :----: | :---------: | :---: | :--: | :--------: | :---------: |
+|    FasterRCNN-PAFPNP2-DecoupledHead    | **×**  | 2e-4(adamw) |  36   |  16  |   58.064   |   39.377    |
+|     FasterRCNN-PAFPN-DecoupledHead     | p=0.5  | 2e-4(adamw) |  36   |  16  | **62.182** | **42.513**  |
+| FasterRCNN-PAFPN-DecoupledHead-**DDP** | p=0.5  | 2e-4(adamw) |  36   |  16  |   60.800   |   41.535    |
+
+image-size=[640, 640]
+
+|                        Model                        |  Mosaic   |     lr      | epoch |  bs  |  AP50(%)   | mAP50-95(%) |
+| :-------------------------------------------------: | :-------: | :---------: | :---: | :--: | :--------: | :---------: |
+|           FasterRCNN-PAFPN-DecoupledHead            | **p=0.5** | 2e-4(adamw) |  36   |  16  | **59.047** | **40.001**  |
+|       FasterRCNN-PAFPN-DecoupledHead-**DDP**        |   p=0.5   | 2e-4(adamw) |  36   |  16  |   58.136   |   39.103    |
+| FasterRCNN-PAFPN-DecoupledHead-**DDP**_dropBlock0.5 |   p=0.5   | 2e-4(adamw) |  36   |  16  |   57.848   |   39.202    |
 
 - `VisDrone2019`
 
@@ -111,13 +124,15 @@ image-size=[640, 640]
 
 image-size=[640, 640]
 
-|           Model           | Mosaic |     lr      | epoch |  bs  |  AP50(%)   | mAP50-95(%) |
-| :-----------------------: | :----: | :---------: | :---: | :--: | :--------: | :---------: |
-|          YOLOv5s          | **×**  | 1e-3(adamw) |  48   |  16  |   47.401   |   29.663    |
-|          YOLOv5s          | p=0.5  | 1e-3(adamw) |  48   |  16  |   48.678   |   30.148    |
-| YOLOv5s (**Ultralytics**) |   -    |      -      |   -   |  -   |   45.120   |   30.928    |
-|          YOLOv5l          | p=0.5  | 1e-3(adamw) |  48   |  16  | **57.808** |   39.717    |
-| YOLOv5l (**Ultralytics**) |   -    |      -      |   -   |  -   |   56.170   | **42.015**  |
+|               Model                | Mosaic |     lr      | epoch |  bs  |  AP50(%)   | mAP50-95(%) |
+| :--------------------------------: | :----: | :---------: | :---: | :--: | :--------: | :---------: |
+|              YOLOv5s               | **×**  | 1e-3(adamw) |  48   |  16  |   47.401   |   29.663    |
+|              YOLOv5s               | p=0.5  | 1e-3(adamw) |  48   |  16  |   52.476   |   32.645    |
+|        YOLOv5s_dropBlock0.5        | p=0.5  | 1e-3(adamw) |  48   |  16  |   49.773   |   31.227    |
+| YOLOv5s_dropBlock0.5_frozeBackbone | p=0.5  | 1e-3(adamw) |  48   |  16  |   52.389   |   32.785    |
+|     YOLOv5s (**Ultralytics**)      |   -    |      -      |   -   |  -   |   45.120   |   30.928    |
+|              YOLOv5l               | p=0.5  | 1e-3(adamw) |  48   |  16  | **57.808** |   39.717    |
+|     YOLOv5l (**Ultralytics**)      |   -    |      -      |   -   |  -   |   56.170   | **42.015**  |
 
 - `VisDrone2019`
 
