@@ -111,6 +111,7 @@ class Runner():
             self.model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(self.model)
 
         '''定义优化器(自适应学习率的带动量梯度下降方法)'''
+        # NOTE:多卡
         if mode in ['train', 'train_ddp']:
             self.optimizer, self.scheduler = optimSheduler(**optimizer, 
                                                            model=self.model, 
@@ -120,8 +121,8 @@ class Runner():
         '''是否恢复断点训练'''
         self.start_epoch = 0
         if self.resume and self.mode in ['train', 'train_ddp']:
-            trainResume(self.resume, self.model, self.optimizer, self.logger, self.argsHistory)
-            
+            self.start_epoch = trainResume(self.resume, self.model, self.optimizer, self.logger, self.argsHistory)
+
         '''导入评估模块'''
         if self.mode =='train_ddp':
             # NOTE:多卡:
@@ -167,7 +168,8 @@ class Runner():
             - losses:      所有损失组成的列表
             - total_loss:  所有损失之和
         '''
-        # 一个batch的前向传播+计算损失
+        # 一个batch的前向传播+计算损失 
+        # NOTE:多卡
         if self.mode=='train_ddp':
             losses = self.model.module.batchLoss(self.local_rank, self.img_size, batch_datas)
         else:

@@ -1,31 +1,25 @@
 import os
 
 # train train_ddp eval test export 
-MODE = 'test'
+MODE = 'train'
 # mobilenetv3_large_100.ra_in1k  resnet50.a1_in1k  darknetaa53.c2ns_in1k cspdarknet53.ra_in1k cspresnext50.ra_in1k
 FROZEBACKBONE = True
-# log_yolov5_VOC_mosaic_0.5_focalloss_obj_root_cls  log_yolov5_VOC_mosaic_0.5_focalloss_root_obj_root_cls_balance_4_1_0.4 
-# ./log/yolo/log_yolov5{PHI}_COCO_mosaic_0.5/best_mAP.pt /log/yolo/log_yolov5s_visDrone_mosaic_0.5_root_focalloss/best_mAP.pt
-PHI = 's'
-# 'last.pt' 
-# log/yolo/log_yolov5{PHI}_DOTAhv1.0_root_focalloss/best_mAP.pt
-# yolov5_s_v6.1.pth
-BACKBONE = f'../CKPT/HD_ckpt/ckpt/cspdarknet_{PHI}_v6.1_backbone.pth'
-LOADCKPT = f"../CKPT/HD_ckpt/yolov5{PHI}/COCO2017/bs16_lr1e-3_mosaic0.5_dropblock0.5/unfreeze/best_AP50.pt"
-TESTCKPT = f"../CKPT/HD_ckpt/yolov5{PHI}/COCO2017/bs16_lr1e-3_mosaic0.5_dropblock0.5/unfreeze/best_AP50.pt"
+BACKBONE = 'resnet50.a1_in1k'
+BACKBONE_CKPT = "F:/Desktop/git/CKPT/HD_ckpt/ckpt/backbone_resnet50.a1_in1k.pt"
+LOADCKPT = f"../CKPT/HD_ckpt/yolov5s/COCO2017/bs16_lr1e-3_mosaic0.5_dropblock0.5/unfreeze/best_AP50.pt"
+TESTCKPT = f"../CKPT/HD_ckpt/yolov5s/COCO2017/bs16_lr1e-3_mosaic0.5_dropblock0.5/unfreeze/best_AP50.pt"
 RESUME = False
 TTA = [[640,640], [832,832], [960,960]]
 TTAOPEN = False
-MASK = [[0,1,2], [3,4,5], [6,7,8]] 
 
 onnx_export_dir = os.path.join('onnx_ckpt', TESTCKPT.split('/')[1])
 onnx_export_name = f"{TESTCKPT.split('/')[-2]}.onnx"
-# TESTCKPT = 'last.pt'
+LOADCKPT = False
+TESTCKPT = False
 
 '''VOC'''
 # CATNUMS = 20
 # IMGSIZE = [640, 640]
-# ANCHORS = [[10, 13], [16, 30], [33, 23], [30, 61], [62, 45], [59, 119], [116, 90], [156, 198], [373, 326]] 
 # train_json_path = 'E:/datasets/Universal/VOC0712/VOC2007/Annotations/coco/train.json'
 # val_json_path =   'E:/datasets/Universal/VOC0712/VOC2007/Annotations/coco/test.json'
 # train_img_dir =   'E:/datasets/Universal/VOC0712/VOC2007/JPEGImages'
@@ -39,7 +33,6 @@ onnx_export_name = f"{TESTCKPT.split('/')[-2]}.onnx"
 '''COCO'''
 CATNUMS = 80
 IMGSIZE = [640, 640]
-ANCHORS = [[10, 13], [16, 30], [33, 23], [30, 61], [62, 45], [59, 119], [116, 90], [156, 198], [373, 326]] 
 train_json_path = "F:/Desktop/研究生/datasets/Universal/COCO2017/COCO/annotations/instances_train2017.json"
 val_json_path =   "F:/Desktop/研究生/datasets/Universal/COCO2017/COCO/annotations/instances_val2017.json"
 train_img_dir =   "F:/Desktop/研究生/datasets/Universal/COCO2017/COCO/train2017"
@@ -64,7 +57,6 @@ reverse_map = {0:1, 1:2, 2:3, 3:4, 4:5, 5:6, 6:7, 7:8, 8:9, 9:10, 10:11, 11:13, 
 '''visDrone2019'''
 # CATNUMS = 10
 # IMGSIZE = [1280, 1280]
-# ANCHORS = [[10, 14], [27, 19], [20, 36], [50, 30], [41, 64], [86, 51], [79, 120], [147, 87], [233, 194]]
 # train_json_path = 'E:/datasets/RemoteSensing/visdrone2019/annotations/train.json'
 # val_json_path =   'E:/datasets/RemoteSensing/visdrone2019/annotations/test.json'
 # train_img_dir =   'E:/datasets/RemoteSensing/visdrone2019/images/train/images'
@@ -77,7 +69,6 @@ reverse_map = {0:1, 1:2, 2:3, 3:4, 4:5, 5:6, 6:7, 7:8, 8:9, 9:10, 10:11, 11:13, 
 '''DOTA'''
 # CATNUMS = 15
 # IMGSIZE = [1024, 1024]
-# ANCHORS = [[18, 24], [38, 25], [34, 46], [68, 43], [46, 94], [94, 88], [175, 126], [150, 226], [402, 408]]
 # train_json_path = 'E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/coco_ann/hbox_train.json'
 # val_json_path =   'E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/coco_ann/hbox_val.json'
 # train_img_dir =   'E:/datasets/RemoteSensing/DOTA-1.0_ss_1024/train/images'
@@ -108,10 +99,8 @@ runner = dict(
         num_workers = 0,
         # 自定义的Dataset:
         my_dataset = dict(
-            path = 'datasets/YOLOv5Dataset.py',
-            train_dataset = dict(
-                anchors = ANCHORS,
-                anchors_mask = MASK, 
+            path = 'datasets/FCOSDataset.py',
+            train_dataset = dict( 
                 num_classes = CATNUMS,
                 annPath = train_json_path, 
                 imgDir = train_img_dir,
@@ -120,8 +109,6 @@ runner = dict(
                 trainMode=True, 
             ),
             val_dataset = dict(
-                anchors = ANCHORS,
-                anchors_mask = MASK, 
                 num_classes = CATNUMS,
                 annPath = val_json_path, 
                 imgDir = val_img_dir,
@@ -133,30 +120,21 @@ runner = dict(
     ),
 
     model = dict(
-        path = 'models/YOLOv5/YOLOv5.py',
+        path = 'models/FCOS/FCOS.py',
         img_size = IMGSIZE, 
-        anchors = ANCHORS,
-        anchors_mask = MASK, 
         num_classes = CATNUMS, 
-        phi = PHI, 
         loadckpt = LOADCKPT,           
         backbone_name = BACKBONE,
         tta_img_size = TTA,
         backbone = dict(
-            loadckpt=BACKBONE, 
-            pretrain=False, 
-            froze=FROZEBACKBONE,
+            modelType = BACKBONE, 
+            loadckpt = BACKBONE_CKPT, 
+            pretrain = False, 
+            froze = FROZEBACKBONE,
         ),
-        # backbone = dict(
-        #     modelType = 'cspdarknet53.ra_in1k',
-        #     loadckpt = './ckpt/cspdarknet53.ra_in1k.pt',
-        #     pretrain = False,
-        #     froze = FROZEBACKBONE,            
-        # ),
         head = dict(
-            cls_loss_type = "BCELoss", 
-            box_loss_type = "GIoULoss", 
-            obj_loss_type = "BCELoss",
+            num_classes = CATNUMS,
+            in_channel = 256,
         )
     ),
     test = dict(

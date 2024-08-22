@@ -332,12 +332,13 @@ def YOLOv5BestRatioAssigner(targets, input_shape, anchors, anchors_mask, bbox_at
         scaled_targets[:, [0,2]] = targets[:, [0,2]] * feat_w
         scaled_targets[:, [1,3]] = targets[:, [1,3]] * feat_h
         scaled_targets[:, 4]     = targets[:, 4]
+        '''计算GT和anchor两两之间的长宽比'''
         # np.expand_dims(a, 1) 在a的第1维度添加一个新的维度: a = [bs, w, h] -> [bs, 1, w, h]
-        # ratios_of_gt_anchors代表每一个真实框和每一个先验框的宽高的比值  [num_gts, 1, 2] [1, 9, 2] -> [num_gts, 9, 2]
+        # ratios_of_gt_anchors代表每一个真实框和每一个先验框的宽与宽的比值、高与高的比值  [num_gts, 1, 2] [1, 9, 2] -> [num_gts, 9, 2]
         ratios_of_gt_anchors = np.expand_dims(scaled_targets[:, 2:4], 1) / np.expand_dims(lvl_anchors, 0)
         # 合并比率信息[num_true_box, 9, 4](取倒数是因为0.25~4的范围都行)
         aspect_ratios = np.concatenate([ratios_of_gt_anchors, 1 / ratios_of_gt_anchors], axis = -1)
-        # 找出每个真实框与所有锚框中最佳匹配的IOU，即最大比率 [num_true_box, 9]
+        # 在宽比值、高比值这2个比值中，取最极端的一个比值，作为GT框和anchor的比值 [num_true_box, 9]
         max_ratios = np.max(aspect_ratios, axis = -1)
         
         '''对每个GT匹配对应的anchors'''

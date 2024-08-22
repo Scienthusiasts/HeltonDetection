@@ -127,7 +127,8 @@ def loadDatasets(mode:str, seed:int, bs:int, num_workers:int, my_dataset:dict):
         from datasets.YOLOv8Dataset import COCODataset
     if dataset_type == 'WSDDNDataset':
         from datasets.WSDDNDataset import COCODataset
-
+    if dataset_type == 'FCOSDataset':
+        from datasets.FCOSDataset import COCODataset
     '''导入验证集'''
     val_json_path = my_dataset['val_dataset']['annPath']
     val_img_dir = my_dataset['val_dataset']['imgDir']
