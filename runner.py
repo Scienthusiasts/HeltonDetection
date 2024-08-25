@@ -256,6 +256,12 @@ class Runner():
 
             # 可以考虑在此处再次同步，确保主进程的评估和日志记录不会被后续的训练步骤干扰(类似阻塞)
             if self.mode=='train_ddp':dist.barrier()
+            
+            # 每一轮结束都保存ckpt
+            if self.mode=='train':
+                torch.save(self.model.state_dict(), os.path.join(self.log_dir, "last.pt"))
+            elif self.mode=='train_ddp':
+                torch.save(self.model.module.state_dict(), os.path.join(self.log_dir, "last.pt"))
 
 
 

@@ -505,17 +505,7 @@ def cxcywh2xyxy(box_xy, box_wh, input_shape, image_shape):
 
 
 def non_max_suppression(prediction, input_shape, conf_thres=0.5, nms_thres=0.4, agnostic=False):
-    '''推理一张图/一帧
-        # Args:
-            - prediction:  不同特征层的预测结果concat在一起
-            - num_classes: 类别数
-            - input_shape: 网络接受的输入尺寸
-            - image_shape: 原图像尺寸
-            - conf_thres:  nms 置信度阈值
-            - nms_thres:   nms iou阈值
-            - agnostic:    是否执行类无关的nms
-        # Returns:
-            - output: 最终预测结果, shape=[num_pred_objs, 7] 7的内容为 x1, y1, x2, y2, obj_conf, cls_score, class_id
+    '''nms
     '''    
     #   将预测结果的cxcywh格式转换成xyxy的格式。
     #   prediction = [bs, num_anchors, num_cls+5]
@@ -561,7 +551,7 @@ def non_max_suppression(prediction, input_shape, conf_thres=0.5, nms_thres=0.4, 
 def NMSbyCLS(predicts, nms_thres):
     '''逐类别nms'''
     cls_output = torch.tensor([])
-    unique_cats = predicts[:, -1].cpu().unique()
+    unique_cats = predicts[:, -1].unique()
     for cat in unique_cats:
         # 获得某一类下的所有预测结果
         detections_class = predicts[predicts[:, -1] == cat]

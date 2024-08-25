@@ -280,12 +280,21 @@ class COCODataset(BaseDataset):
             labels = [self.map[i] for i in labels]
         labels = np.array(labels)
         boxes = np.array(boxes, dtype=np.float32)
+        
+        '''以下专门用来调整到FCOS接受的格式'''
+        # 将coco格式(xywh)调整为xyxy:
+        boxes[:, [2, 3]] += boxes[:, [0, 1]]
         # 将box和label的个数都padding到self.max_boxes的大小
         padding_labels = np.zeros(self.max_boxes)
         padding_boxes = np.zeros((self.max_boxes, 4))
-        padding_labels[:len(labels)] = labels
-        padding_boxes[:len(boxes)] = boxes
-        # box是coco格式(xywh):
+        # 限制一张图像里的GT数量不超过self.max_boxes:
+        if len(labels) <= self.max_boxes:
+            padding_labels[:len(labels)] = labels
+            padding_boxes[:len(boxes)] = boxes
+        else:
+            padding_labels = labels[:self.max_boxes]
+            padding_boxes = boxes[:self.max_boxes]
+        # box是未归一化的xyxy:
         return image.transpose(2,0,1), padding_boxes, padding_labels
 
 
@@ -425,9 +434,9 @@ def visBatch(dataLoader:DataLoader, showText=False):
             img = np.clip(img * std + mean, 0, 1)
             for instBox, instLabel in zip(box, label):
                 if (instBox[2]==0 or instBox[3]==0):continue
-                x0, y0, w, h, cat_id = round(instBox[0]), round(instBox[1]), round(instBox[2]), round(instBox[3]), int(instLabel)
+                x0, y0, x1, y1, cat_id = round(instBox[0]), round(instBox[1]), round(instBox[2]), round(instBox[3]), int(instLabel)
                 # 显示框
-                ax.add_patch(plt.Rectangle((x0, y0), w, h, color='blue', fill=False, linewidth=0.6))
+                ax.add_patch(plt.Rectangle((x0, y0), x1-x0, y1-y0, color='blue', fill=False, linewidth=0.6))
                 # 显示类别
                 if showText:
                     ax.text(x0, y0, catName[cat_id], bbox={'facecolor':'white', 'alpha':0.5})

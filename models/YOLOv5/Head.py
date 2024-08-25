@@ -12,7 +12,7 @@ from utils.YOLOAnchorUtils import *
 
 class YOLOv5Head(nn.Module):
     def __init__(self, l, cat_nums, img_size, anchors, in_channels, anchors_mask, cls_loss_type, box_loss_type, obj_loss_type, label_smoothing=0):
-        '''RPN网络
+        '''Head
         Args:
 
         Returns:

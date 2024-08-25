@@ -52,8 +52,12 @@ def GIoULoss(box_giou, target):
 
 
 class Loss(nn.Module):
-    def __init__(self, loss_type:str, gamma=1.5, alpha=0.25):
+    def __init__(self, loss_type:str, gamma=1.5, alpha=0.25, reduction='mean'):
+        '''
+            - loss_type: BCELoss | MSELoss | FocalLoss | QFocalLoss | GIoULoss
+        '''
         super().__init__()
+        self.reduction = reduction
         self.loss_fcn = nn.BCEWithLogitsLoss(reduction="none")
         self.loss_type = loss_type
         self.gamma = gamma
@@ -71,5 +75,9 @@ class Loss(nn.Module):
         elif self.loss_type == 'GIoULoss':
             loss = GIoULoss(pred, target)
         
-        return torch.mean(loss)
-
+        if self.reduction=='mean':
+            return torch.mean(loss)
+        if self.reduction=='sum':
+            return torch.sum(loss)
+        if self.reduction=='none':
+            return loss

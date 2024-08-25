@@ -248,7 +248,6 @@ def saveCkpt(
         'sched_state_dict': scheduler.state_dict()
         }
     torch.save(checkpoint_dict, os.path.join(log_dir, f"epoch_{epoch}.pt"))
-    torch.save(model.state_dict(), os.path.join(log_dir, "last.pt"))
     # 如果本次Epoch的val AP50最大，则保存参数(网络权重)
     AP50_list = argsHistory.args_history_dict['val_mAP@.5']
     if epoch == AP50_list.index(max(AP50_list)):
@@ -306,7 +305,7 @@ def myLogger(mode:str, log_dir:str):
         stream_handler = logging.StreamHandler()
         stream_handler.setLevel(logging.INFO)
         stream_handler.setFormatter(formatter)
-        # logger.addHandler(stream_handler)
+        logger.addHandler(stream_handler)
     # 对于非主进程，可以设置一个空的日志处理器来忽略日志记录
     else:
         logger.addHandler(logging.NullHandler())
@@ -477,3 +476,4 @@ def trainResume(
     # 导入上一次中断训练时的args
     json_dir, _ = os.path.split(resume)
     argsHistory.loadRecord(json_dir)
+    return start_epoch

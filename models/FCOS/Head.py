@@ -5,6 +5,7 @@ import torch.nn.functional as F
 
 from utils.util import *
 from utils.FCOSUtils import *
+from loss.YOLOLoss import *
 
 
 
@@ -34,7 +35,7 @@ class Head(nn.Module):
         self.num_classes=num_classes
         cls_branch=[]
         reg_branch=[]
-
+        '''定义网络结构'''
         # 预测头之前的特征提取部分
         for _ in range(4):
             # 分类分支特征提取(cls和centerness)
@@ -49,7 +50,7 @@ class Head(nn.Module):
         # 预测头之前的共享特征提取
         self.cls_conv=nn.Sequential(*cls_branch)
         self.reg_conv=nn.Sequential(*reg_branch)
-        '''分类回归头解耦'''
+        # 分类回归头解耦
         # 分类头
         self.cls_head = nn.Conv2d(in_channel, num_classes, kernel_size=3, padding=1)
         # centerness头
@@ -58,6 +59,10 @@ class Head(nn.Module):
         self.reg_head = nn.Conv2d(in_channel, 4, kernel_size=3, padding=1)
         # 回归头上的可学习放缩系数
         self.scale_exp = nn.ModuleList([ScaleExp(1) for _ in range(5)])
+        '''定义损失函数'''
+        self.cntLoss = nn.BCEWithLogitsLoss()
+        self.clsLoss = Loss(loss_type='FocalLoss', gamma=2.0, alpha=0.25, reduction='none')
+        self.boxLoss = Loss(loss_type='GIoULoss', reduction='mean')
 
         # 权重初始化
         init_weights(self.cls_conv, 'normal', 0, 0.01)
@@ -82,6 +87,7 @@ class Head(nn.Module):
 
             cls_logits.append(self.cls_head(cls_conv_out))
             cnt_logits.append(self.cnt_head(cls_conv_out))
+            # 这里回归出来就是原图尺寸下的偏移量
             reg_preds.append(self.scale_exp[lvl](self.reg_head(reg_conv_out)))
         return cls_logits, cnt_logits, reg_preds
 
@@ -89,178 +95,45 @@ class Head(nn.Module):
 
 
 
-    def batchLoss(self, fpn_feat, batch_bboxes, batch_labels):
+    def batchLoss(self, fpn_feat, batch_bboxes, batch_labels, input_shape):
         # head部分前向
+        # [[bs, cls_num, w, h],...,[...]] [[bs, 1, w, h],...,[...]] [[bs, 4, w, h],...,[...]]
         cls_logits, cnt_logits, reg_preds = self.forward(fpn_feat)
         '''FCOS的正负样本分配'''
-        cls_targets, cnt_targets, reg_targets = FCOSAssigner(cls_logits, batch_bboxes, batch_labels)
-        # 根据centerness获得正样本
-        mask_pos = (cnt_targets > -1).squeeze(dim=-1)
-        cls_loss = self.compute_cls_loss(cls_logits, cls_targets, mask_pos)
-        cnt_loss = self.compute_cnt_loss(cnt_logits, cnt_targets, mask_pos)
-        reg_loss = self.compute_reg_loss(reg_preds, reg_targets, mask_pos)
+        # 对应位置标记为-1的是负样本 [bs * total_anchor_num, 1] [bs * total_anchor_num, 1] [bs * total_anchor_num, 4]
+        cls_targets, cnt_targets, reg_targets = FCOSAssigner(batch_bboxes, batch_labels, input_shape)
+        # 获得正样本(bool) [bs, total_anchor_num]
+        pos_mask = (cnt_targets > -1).reshape(-1)
+        '''计算损失'''
+        # 调整预测结果的形状:
+        # [[bs, cls_num, 80, 80],...,[[bs, cls_num, 5, 5]]] -> [bs * total_anchor_num, cls_num]
+        cls_preds = reshape_cat_out(cls_logits).reshape(-1, self.num_classes)
+        # [[bs, 1, 80, 80],...,[[bs, 1, 5, 5]]] -> [bs * total_anchor_num, 1]
+        cnt_preds = reshape_cat_out(cnt_logits).reshape(-1, 1)
+        # [[bs, 4, 80, 80],...,[[bs, 4, 5, 5]]] -> [bs * total_anchor_num, 4]
+        reg_preds = reshape_cat_out(reg_preds).reshape(-1, 4)
+        # 计算损失:
+        '''分类损失(所有样本均参与计算)'''
+        # 计算batch里每张图片的正样本数量 [bs,]
+        num_pos = torch.sum(pos_mask).clamp_(min=1).float()
+        # 生成one_hot标签
+        cls_targets  = (torch.arange(0, self.num_classes, device=cls_targets.device)[None,:] == cls_targets).float()
+        cls_loss = self.clsLoss(cls_preds, cls_targets).sum() / torch.sum(num_pos)
+        '''centerness损失(正样本才计算)'''
+        # 计算BCE损失
+        cnt_loss = self.cntLoss(cnt_preds[pos_mask], cnt_targets[pos_mask])
+        '''回归损失(正样本才计算)'''
+        # 计算GIoU loss
+        giou = computeGIoU(reg_preds[pos_mask], reg_targets[pos_mask])
+        reg_loss = (1. - giou).mean()
+        '''loss以字典形式回传'''
         loss = dict(
             total_loss = cls_loss + cnt_loss + reg_loss,
             cls_loss = cls_loss,
             cnt_loss = cnt_loss,
             reg_loss = reg_loss
         )
-        return loss
-
-
-        
-    
-
-    def compute_cls_loss(self, preds, targets, mask, gamma=2.0, alpha=0.25):
-        #--------------------#
-        #   计算batch_size
-        #   计算种类数量
-        #--------------------#
-        batch_size      = targets.shape[0]
-        num_classes     = preds[0].shape[1]
-        
-        mask            = mask.unsqueeze(dim = -1)
-        #--------------------#
-        #   计算正样本数量
-        #--------------------#
-        num_pos         = torch.sum(mask, dim = [1, 2]).clamp_(min = 1).float()
-        preds_reshape   = []
-        for pred in preds:
-            #--------------------#
-            #   对预测结果reshape
-            #--------------------#
-            pred        = torch.reshape(pred.permute(0, 2, 3, 1), [batch_size, -1, num_classes])
-            preds_reshape.append(pred)
-        preds           = torch.cat(preds_reshape, dim = 1)
-        assert preds.shape[:2]==targets.shape[:2]
-        
-        #--------------------#
-        #   对计算损失
-        #--------------------#
-        loss = 0
-        for batch_index in range(batch_size):
-            pred_pos    = torch.sigmoid(preds[batch_index])
-            target_pos  = targets[batch_index]
-            #--------------------#
-            #   生成one_hot标签
-            #--------------------#
-            target_pos  = (torch.arange(0, num_classes, device=target_pos.device)[None,:] == target_pos).float()
-            
-            #--------------------#
-            #   计算focal_loss
-            #--------------------#
-            pt          = pred_pos * target_pos + (1.0 - pred_pos) * (1.0 - target_pos)
-            w           = alpha * target_pos + (1.0 - alpha) * (1.0 - target_pos)
-            batch_loss  = -w * torch.pow((1.0 - pt), gamma) * pt.log()
-            batch_loss  = batch_loss.sum()
-            loss += batch_loss
-            
-        return loss / torch.sum(num_pos)
-
-    def compute_cnt_loss(self, preds, targets, mask):
-        #------------------------#
-        #   计算batch_size
-        #   计算center长度（1）
-        #------------------------#
-        batch_size  = targets.shape[0]
-        c           = targets.shape[-1]
-        
-        mask            = mask.unsqueeze(dim = -1)
-        #--------------------#
-        #   计算正样本数量
-        #--------------------#
-        num_pos         = torch.sum(mask, dim = [1, 2]).clamp_(min = 1).float()
-        
-        preds_reshape   = []
-        for pred in preds:
-            #--------------------#
-            #   对预测结果reshape
-            #--------------------#
-            pred        = torch.reshape(pred.permute(0, 2, 3, 1), [batch_size, -1, c])
-            preds_reshape.append(pred)
-            
-        preds           = torch.cat(preds_reshape, dim = 1)
-        assert preds.shape==targets.shape
-        
-        #--------------------#
-        #   对计算损失
-        #--------------------#
-        loss = 0
-        for batch_index in range(batch_size):
-            pred_pos    = preds[batch_index][mask[batch_index]]
-            target_pos  = targets[batch_index][mask[batch_index]]
-            batch_loss  = nn.functional.binary_cross_entropy_with_logits(input=pred_pos,target=target_pos,reduction='sum').view(1)
-            loss += batch_loss
-            
-        return torch.sum(loss, dim=0) / torch.sum(num_pos)
-
-    def giou_loss(self, preds, targets):
-        #------------------------#
-        #   左上角和右下角
-        #------------------------#
-        lt_min  = torch.min(preds[:, :2], targets[:, :2])
-        rb_min  = torch.min(preds[:, 2:], targets[:, 2:])
-        #------------------------#
-        #   重合面积计算
-        #------------------------#
-        wh_min  = (rb_min + lt_min).clamp(min=0)
-        overlap = wh_min[:, 0] * wh_min[:, 1]#[n]
-        
-        #------------------------------#
-        #   预测框面积和实际框面积计算
-        #------------------------------#
-        area1   = (preds[:, 2] + preds[:, 0]) * (preds[:, 3] + preds[:, 1])
-        area2   = (targets[:, 2] + targets[:, 0]) * (targets[:, 3] + targets[:, 1])
-        
-        #------------------------------#
-        #   计算交并比
-        #------------------------------#
-        union   = (area1 + area2 - overlap)
-        iou     = overlap / union
-
-        #------------------------------#
-        #   计算外包围框
-        #------------------------------#
-        lt_max  = torch.max(preds[:, :2],targets[:, :2])
-        rb_max  = torch.max(preds[:, 2:],targets[:, 2:])
-        wh_max  = (rb_max + lt_max).clamp(0)
-        G_area  = wh_max[:, 0] * wh_max[:, 1]
-
-        #------------------------------#
-        #   计算GIOU
-        #------------------------------#
-        giou    = iou - (G_area - union) / G_area.clamp(1e-10)
-        loss    = 1. - giou
-        return loss.sum()
-        
-    def compute_reg_loss(self, preds, targets, mask):
-        #------------------------#
-        #   计算batch_size
-        #   计算回归参数长度（4）
-        #------------------------#
-        batch_size  = targets.shape[0]
-        c           = targets.shape[-1]
-        
-        num_pos     = torch.sum(mask, dim=1).clamp_(min=1).float()#[batch_size,]
-        preds_reshape=[]
-        for pred in preds:
-            #--------------------#
-            #   对预测结果reshape
-            #--------------------#
-            pred        = torch.reshape(pred.permute(0, 2, 3, 1), [batch_size, -1, c])
-            preds_reshape.append(pred)
-            
-        preds           = torch.cat(preds_reshape, dim = 1)
-        assert preds.shape==targets.shape
-        
-        loss = 0
-        for batch_index in range(batch_size):
-            pred_pos    = preds[batch_index][mask[batch_index]]
-            target_pos  = targets[batch_index][mask[batch_index]]
-            batch_loss  = self.giou_loss(pred_pos, target_pos).view(1)
-            loss += batch_loss
-        return torch.sum(loss, dim=0) / torch.sum(num_pos)
-
+        return loss  
 
 
 

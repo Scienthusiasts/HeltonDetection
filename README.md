@@ -153,6 +153,39 @@ image-size=[1024, 1024]
 |         YOLOv5s         | p=0.5  | 1e-3(adamw) |  48   |  16  |   64.349   |   39.500    |
 | YOLOv5s-focalloss(root) | p=0.5  | 1e-3(adamw) |  48   |  16  | **65.174** | **39.257**  |
 
+### FCOS
+
+- `VOC0712`
+
+image-size=[640, 640]
+
+Mosaic: p=0.5
+
+epoch=37
+
+bs=16
+
+|     Model     | DropBlock |  lr  | optim |  AP50(%)   | mAP50-95(%) |
+| :-----------: | :-------: | :--: | :---: | :--------: | :---------: |
+| FCOS-rn50-fpn |     ×     | 2e-3 |  sgd  |   70.230   |   38.456    |
+| FCOS-rn50-fpn |     ×     | 2e-4 | adamw |   77.770   |   51.584    |
+| FCOS-rn50-fpn |    0.5    | 1e-3 | adamw |   77.099   |   52.432    |
+| FCOS-rn50-fpn |    0.5    | 2e-4 | adamw | **78.376** | **52.998**  |
+
+- `COCO2017`
+
+image-size=[640, 640]
+
+Mosaic: p=0.5
+
+epoch=36
+
+bs=16
+
+|     Model     | DropBlock |  lr  | optim | AP50(%) | mAP50-95(%) |
+| :-----------: | :-------: | :--: | :---: | :-----: | :---------: |
+| FCOS-rn50-fpn |    0.5    | 2e-4 | adamw | 55.794  |   37.423    |
+
 ## reference
 
 [bubbliiiing/faster-rcnn-pytorch: 这是一个faster-rcnn的pytorch实现的库，可以利用voc数据集格式的数据进行训练。 (github.com)](https://github.com/bubbliiiing/faster-rcnn-pytorch)

@@ -1,29 +1,29 @@
 import os
 
 # train train_ddp eval test export 
-MODE = 'train'
+MODE = 'test'
 # mobilenetv3_large_100.ra_in1k  resnet50.a1_in1k  darknetaa53.c2ns_in1k cspdarknet53.ra_in1k cspresnext50.ra_in1k
 FROZEBACKBONE = True
 BACKBONE = 'resnet50.a1_in1k'
 BACKBONE_CKPT = "F:/Desktop/git/CKPT/HD_ckpt/ckpt/backbone_resnet50.a1_in1k.pt"
-LOADCKPT = f"../CKPT/HD_ckpt/yolov5s/COCO2017/bs16_lr1e-3_mosaic0.5_dropblock0.5/unfreeze/best_AP50.pt"
-TESTCKPT = f"../CKPT/HD_ckpt/yolov5s/COCO2017/bs16_lr1e-3_mosaic0.5_dropblock0.5/unfreeze/best_AP50.pt"
+LOADCKPT = f"F:/Desktop/git/CKPT/HD_ckpt/fcos/resnet50_epoch36_lr2e-4_adamw_bs16_COCO/2024-08-25-00-38-22_train/last.pt"
+TESTCKPT = f"F:/Desktop/git/CKPT/HD_ckpt/fcos/resnet50_epoch36_lr2e-4_adamw_bs16_COCO/2024-08-25-00-38-22_train/last.pt"
 RESUME = False
 TTA = [[640,640], [832,832], [960,960]]
 TTAOPEN = False
 
 onnx_export_dir = os.path.join('onnx_ckpt', TESTCKPT.split('/')[1])
 onnx_export_name = f"{TESTCKPT.split('/')[-2]}.onnx"
-LOADCKPT = False
-TESTCKPT = False
+# LOADCKPT = 'last.pt'
+# TESTCKPT = 'last.pt'
 
 '''VOC'''
 # CATNUMS = 20
 # IMGSIZE = [640, 640]
-# train_json_path = 'E:/datasets/Universal/VOC0712/VOC2007/Annotations/coco/train.json'
-# val_json_path =   'E:/datasets/Universal/VOC0712/VOC2007/Annotations/coco/test.json'
-# train_img_dir =   'E:/datasets/Universal/VOC0712/VOC2007/JPEGImages'
-# val_img_dir   =   'E:/datasets/Universal/VOC0712/VOC2007/JPEGImages'
+# train_json_path = 'F:/Desktop/研究生/datasets/Universal/VOC0712/VOC2007/Annotations/coco/train.json'
+# val_json_path =   'F:/Desktop/研究生/datasets/Universal/VOC0712/VOC2007/Annotations/coco/test.json'
+# train_img_dir =   'F:/Desktop/研究生/datasets/Universal/VOC0712/VOC2007/JPEGImages'
+# val_img_dir   =   'F:/Desktop/研究生/datasets/Universal/VOC0712/VOC2007/JPEGImages'
 # cat_names = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow", "diningtable", 
 #                 "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
 # cat_map = None
