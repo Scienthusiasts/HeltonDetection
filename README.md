@@ -32,6 +32,10 @@
 
 - **创建了有向目标检测仓库，目前支持YOLOv5旋转框检测！本仓库中的有向目标检测相关代码逻辑已迁移至[HeltonRotation](https://github.com/Scienthusiasts/HeltonRotation/tree/dev)**
 
+**24/8/25 更新 :**
+
+- 支持FCOS检测器
+
 ## Demo
 
 ![1](https://github.com/Scienthusiasts/HeltonDetection/blob/dev/demo/1.jpg)
