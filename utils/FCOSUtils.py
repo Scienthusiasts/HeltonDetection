@@ -72,8 +72,12 @@ def decode_box(cls_logits, cnt_logits, reg_preds, input_shape, strides=[8, 16, 3
     grids = gen_grid(cls_logits, strides)
     # 获得得分最高对应的类别得分和类别
     cls_scores, cls_classes = torch.max(cls_preds,dim=-1)
-    # 置信度是类别得分和centerness的乘积(开根号)
+    '''置信度是类别得分和centerness的乘积'''
+    # 1. 乘积开根号
     # cls_scores = torch.sqrt(cls_scores * cnt_preds.squeeze(dim=-1))
+    # 2.centerness开根号
+    # cls_scores = cls_scores * torch.sqrt(cnt_preds.squeeze(dim=-1))
+    # 3.乘积
     cls_scores = cls_scores * cnt_preds.squeeze(dim=-1)
     # 通过中心点和网络预测的tlbr获得box的左上角右下角点(原图的未归一化坐标)
     left_top = grids[None, :, :] - reg_preds[..., :2]
@@ -125,7 +129,7 @@ def NMSbyCLS(predicts, nms_thres):
         # 获得某一类下的所有预测结果
         detections_class = predicts[predicts[:, -1] == cat]
         # 使用官方自带的非极大抑制会速度更快一些
-        final_cls_score = detections_class[:, 4] * detections_class[:, 5]
+        final_cls_score = detections_class[:, 4]
         '''接着筛选掉nms大于nms_thres的预测''' 
         keep = nms(detections_class[:, :4], final_cls_score, nms_thres)
         nms_detections = detections_class[keep]
