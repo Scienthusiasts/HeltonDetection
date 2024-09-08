@@ -6,52 +6,52 @@ MODE = 'test'
 FROZEBACKBONE = True
 BACKBONE = 'resnet50.a1_in1k'
 BACKBONE_CKPT = "F:/Desktop/git/CKPT/HD_ckpt/ckpt/backbone_resnet50.a1_in1k.pt"
-LOADCKPT = f"F:/Desktop/git/CKPT/HD_ckpt/fcos/resnet50_epoch36_lr2e-4_adamw_bs16_COCO/2024-08-25-00-38-22_train/last.pt"
-TESTCKPT = f"F:/Desktop/git/CKPT/HD_ckpt/fcos/resnet50_epoch36_lr2e-4_adamw_bs16_COCO/2024-08-25-00-38-22_train/last.pt"
+LOADCKPT = "F:/Desktop/git/CKPT/HD_ckpt/fcos/resnet50_epoch37_lr2e-4_adamw_bs16_VOC/2024-08-23-00-53-45_train/best_mAP.pt"
+TESTCKPT = "F:/Desktop/git/CKPT/HD_ckpt/fcos/resnet50_epoch37_lr2e-4_adamw_bs16_VOC/2024-08-23-00-53-45_train/best_mAP.pt"
 RESUME = False
 TTA = [[640,640], [832,832], [960,960]]
 TTAOPEN = False
 
 onnx_export_dir = os.path.join('onnx_ckpt', TESTCKPT.split('/')[1])
 onnx_export_name = f"{TESTCKPT.split('/')[-2]}.onnx"
-# LOADCKPT = 'last.pt'
-# TESTCKPT = 'last.pt'
+# LOADCKPT = False
+# TESTCKPT = False
 
 '''VOC'''
-# CATNUMS = 20
-# IMGSIZE = [640, 640]
-# train_json_path = 'F:/Desktop/研究生/datasets/Universal/VOC0712/VOC2007/Annotations/coco/train.json'
-# val_json_path =   'F:/Desktop/研究生/datasets/Universal/VOC0712/VOC2007/Annotations/coco/test.json'
-# train_img_dir =   'F:/Desktop/研究生/datasets/Universal/VOC0712/VOC2007/JPEGImages'
-# val_img_dir   =   'F:/Desktop/研究生/datasets/Universal/VOC0712/VOC2007/JPEGImages'
-# cat_names = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow", "diningtable", 
-#                 "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
-# cat_map = None
-# reverse_map = None
+CATNUMS = 20
+IMGSIZE = [640, 640]
+train_json_path = 'F:/Desktop/master/datasets/Universal/VOC0712/VOC2007/Annotations/coco/train.json'
+val_json_path =   'F:/Desktop/master/datasets/Universal/VOC0712/VOC2007/Annotations/coco/test.json'
+train_img_dir =   'F:/Desktop/master/datasets/Universal/VOC0712/VOC2007/JPEGImages'
+val_img_dir   =   'F:/Desktop/master/datasets/Universal/VOC0712/VOC2007/JPEGImages'
+cat_names = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow", "diningtable", 
+                "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
+cat_map = None
+reverse_map = None
 
 
 '''COCO'''
-CATNUMS = 80
-IMGSIZE = [640, 640]
-train_json_path = "F:/Desktop/研究生/datasets/Universal/COCO2017/COCO/annotations/instances_train2017.json"
-val_json_path =   "F:/Desktop/研究生/datasets/Universal/COCO2017/COCO/annotations/instances_val2017.json"
-train_img_dir =   "F:/Desktop/研究生/datasets/Universal/COCO2017/COCO/train2017"
-val_img_dir =     "F:/Desktop/研究生/datasets/Universal/COCO2017/COCO/val2017"
-cat_names = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light', 'fire hydrant',
-           'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe',
-           'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat',
-           'baseball glove', 'skateboard', 'surfboard', 'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl',
-           'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
-           'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave',
-           'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush']
-cat_map = {1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6, 8:7, 9:8, 10:9, 11:10, 13:11, 14:12, 15:13, 16:14, 17:15, 18:16, 19:17, 20:18, 21:19, 22:20, 23:21, 
-       24:22, 25:23, 27:24, 28:25, 31:26, 32:27, 33:28, 34:29, 35:30, 36:31, 37:32, 38:33, 39:34, 40:35, 41:36, 42:37, 43:38, 44:39, 46:40, 
-       47:41, 48:42, 49:43, 50:44, 51:45, 52:46, 53:47, 54:48, 55:49, 56:50, 57:51, 58:52, 59:53, 60:54, 61:55, 62:56, 63:57, 64:58, 65:59, 
-       67:60, 70:61, 72:62, 73:63, 74:64, 75:65, 76:66, 77:67, 78:68, 79:69, 80:70, 81:71, 82:72, 84:73, 85:74, 86:75, 87:76, 88:77, 89:78, 90:79}
-reverse_map = {0:1, 1:2, 2:3, 3:4, 4:5, 5:6, 6:7, 7:8, 8:9, 9:10, 10:11, 11:13, 12:14, 13:15, 14:16, 15:17, 16:18, 17:19, 18:20, 19:21, 20:22, 21:23, 
-       22:24, 23:25, 24:27, 25:28, 26:31, 27:32, 28:33, 29:34, 30:35, 31:36, 32:37, 33:38, 34:39, 35:40, 36:41, 37:42, 38:43, 39:44, 40:46, 
-       41:47, 42:48, 43:49, 44:50, 45:51, 46:52, 47:53, 48:54, 49:55, 50:56, 51:57, 52:58, 53:59, 54:60, 55:61, 56:62, 57:63, 58:64, 59:65, 
-       60:67, 61:70, 62:72, 63:73, 64:74, 65:75, 66:76, 67:77, 68:78, 69:79, 70:80, 71:81, 72:82, 73:84, 74:85, 75:86, 76:87, 77:88, 78:89, 79:90}
+# CATNUMS = 80
+# IMGSIZE = [640, 640]
+# train_json_path = "F:/Desktop/master/datasets/Universal/COCO2017/COCO/annotations/instances_train2017.json"
+# val_json_path =   "F:/Desktop/master/datasets/Universal/COCO2017/COCO/annotations/instances_val2017.json"
+# train_img_dir =   "F:/Desktop/master/datasets/Universal/COCO2017/COCO/train2017"
+# val_img_dir =     "F:/Desktop/master/datasets/Universal/COCO2017/COCO/val2017"
+# cat_names = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light', 'fire hydrant',
+#            'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe',
+#            'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat',
+#            'baseball glove', 'skateboard', 'surfboard', 'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl',
+#            'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
+#            'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave',
+#            'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush']
+# cat_map = {1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6, 8:7, 9:8, 10:9, 11:10, 13:11, 14:12, 15:13, 16:14, 17:15, 18:16, 19:17, 20:18, 21:19, 22:20, 23:21, 
+#        24:22, 25:23, 27:24, 28:25, 31:26, 32:27, 33:28, 34:29, 35:30, 36:31, 37:32, 38:33, 39:34, 40:35, 41:36, 42:37, 43:38, 44:39, 46:40, 
+#        47:41, 48:42, 49:43, 50:44, 51:45, 52:46, 53:47, 54:48, 55:49, 56:50, 57:51, 58:52, 59:53, 60:54, 61:55, 62:56, 63:57, 64:58, 65:59, 
+#        67:60, 70:61, 72:62, 73:63, 74:64, 75:65, 76:66, 77:67, 78:68, 79:69, 80:70, 81:71, 82:72, 84:73, 85:74, 86:75, 87:76, 88:77, 89:78, 90:79}
+# reverse_map = {0:1, 1:2, 2:3, 3:4, 4:5, 5:6, 6:7, 7:8, 8:9, 9:10, 10:11, 11:13, 12:14, 13:15, 14:16, 15:17, 16:18, 17:19, 18:20, 19:21, 20:22, 21:23, 
+#        22:24, 23:25, 24:27, 25:28, 26:31, 27:32, 28:33, 29:34, 30:35, 31:36, 32:37, 33:38, 34:39, 35:40, 36:41, 37:42, 38:43, 39:44, 40:46, 
+#        41:47, 42:48, 43:49, 44:50, 45:51, 46:52, 47:53, 48:54, 49:55, 50:56, 51:57, 52:58, 53:59, 54:60, 55:61, 56:62, 57:63, 58:64, 59:65, 
+#        60:67, 61:70, 62:72, 63:73, 64:74, 65:75, 66:76, 67:77, 68:78, 69:79, 70:80, 71:81, 72:82, 73:84, 74:85, 75:86, 76:87, 77:88, 78:89, 79:90}
 
 
 '''visDrone2019'''
