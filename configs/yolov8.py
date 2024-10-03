@@ -148,9 +148,20 @@ runner = dict(
     optimizer = dict(
         optim_type = 'adamw',
         lr = 1e-3,
+    ),
+    scheduler = dict(
+        scheduler_type = 'CosineLR',
+        lr = 1e-3,
         lr_min_ratio = 0.1,
         warmup_lr_init_ratio = 0.01,
     ),
+    # scheduler = dict(
+    #     scheduler_type = 'ConditionalStepLR',
+    #     lr = 1e-3,
+    #     warmup_lr_init_ratio = 0.01,
+    #     decay_rate = 0.1,
+    #     decay_t_list = [6/9, 8/9]
+    # ),
 )
 
 eval = dict(

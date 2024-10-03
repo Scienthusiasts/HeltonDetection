@@ -36,6 +36,10 @@
 
 - 支持FCOS检测器
 
+**24/10/1 更新：**
+
+- 支持更多学习率衰减策略
+
 ## Demo
 
 ![1](https://github.com/Scienthusiasts/HeltonDetection/blob/dev/demo/1.jpg)

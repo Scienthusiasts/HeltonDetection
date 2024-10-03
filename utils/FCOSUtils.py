@@ -387,7 +387,6 @@ def computeGIoU(preds, targets):
         # Returns:
             - giou:  shape=[total_anchor_num, 4]
     '''
-    print(preds.shape, targets.shape)
     # 左上角和右下角
     lt_min = torch.min(preds[:, :2], targets[:, :2])
     rb_min = torch.min(preds[:, 2:], targets[:, 2:])

@@ -14,8 +14,8 @@ from functools import partial
 from pycocotools.coco import COCO
 import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
-from timm.scheduler import CosineLRScheduler
 from torch.utils.tensorboard import SummaryWriter
+from timm.scheduler import CosineLRScheduler, StepLRScheduler
 # 多卡并行训练:
 import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
@@ -24,6 +24,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 # 自定义模块
 from utils.util import *
 from opt.sophia import SophiaG
+from opt.scheduler import ConditionalStepLRScheduler
 from utils.FasterRCNNAnchorUtils import *
 
 
@@ -169,14 +170,11 @@ def loadDatasets(mode:str, seed:int, bs:int, num_workers:int, my_dataset:dict):
 
 
 
-def optimSheduler(
+def selectOptimizer(
         model:nn.Module,
-        total_epoch:int,
         optim_type:str, 
-        train_data_loader,
         lr:float, 
-        lr_min_ratio:float, 
-        warmup_lr_init_ratio:float):
+        ):
     '''定义优化器和学习率衰减策略
         Args:
             - model:                网络模型
@@ -197,24 +195,42 @@ def optimSheduler(
         'sgd'  : optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True, weight_decay=0),
         'sophia' : SophiaG(model.parameters(), lr=lr, betas=(0.965, 0.99), rho = 0.05, weight_decay=0),
     }[optim_type]
-    # 使用warmup+余弦退火学习率
-    scheduler = CosineLRScheduler(
-        optimizer=optimizer,
-        # 总迭代数
-        t_initial=total_epoch*len(train_data_loader),  
-        # 余弦退火最低的学习率        
-        lr_min=lr*lr_min_ratio,               
-        # 学习率预热阶段的epoch数量                        
-        warmup_t=2*len(train_data_loader), 
-        # 学习率预热阶段的lr起始值
-        warmup_lr_init=lr*warmup_lr_init_ratio,                               
-    )
 
-    return optimizer, scheduler
+    return optimizer
 
 
 
 
+def selectScheduler(optimizer, scheduler_type:str, total_epoch:int, lr:float, train_data_loader, warmup_lr_init_ratio:float, **kwargs):
+    # 总迭代数
+    total_iters = total_epoch * len(train_data_loader)
+    # 学习率预热阶段的epoch数量 
+    warmup_t = 2 * len(train_data_loader)
+
+    if scheduler_type == 'CosineLR':
+        # warmup+余弦退火学习率
+        scheduler = CosineLRScheduler(
+            optimizer=optimizer,
+            # 总迭代数
+            t_initial=total_iters,  
+            # 余弦退火最低的学习率        
+            lr_min=lr * kwargs['lr_min_ratio'],               
+            # 学习率预热阶段的epoch数量                        
+            warmup_t=warmup_t, 
+            # 学习率预热阶段的lr起始值
+            warmup_lr_init=lr * warmup_lr_init_ratio,                               
+        )
+    if scheduler_type == 'ConditionalStepLR':
+        decay_t_list = [t * total_iters for t in kwargs['decay_t_list']]
+        # 阶梯学习率衰减策略, 自定义衰减时机
+        scheduler = ConditionalStepLRScheduler(
+            optimizer=optimizer, 
+            warmup_t=warmup_t, 
+            warmup_lr_init=lr * warmup_lr_init_ratio, 
+            decay_rate=kwargs['decay_rate'], 
+            decay_t_list=decay_t_list,
+        )
+    return scheduler
 
 
 
@@ -477,3 +493,4 @@ def trainResume(
     json_dir, _ = os.path.split(resume)
     argsHistory.loadRecord(json_dir)
     return start_epoch
+
