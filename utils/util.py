@@ -97,6 +97,21 @@ def init_weights(model, init_type, mean=0, std=0.01):
 
 
 
+
+
+def resumeCKPT2CKPT(resume_ckpt_path, save_ckpt_path):
+    '''将resume权重里专门属于模型权重的那部分拿出来, 并再次保存
+    '''
+    save_ckpt_dir, name = os.path.split(save_ckpt_path)
+    if not os.path.isdir(save_ckpt_dir):os.makedirs(save_ckpt_dir)
+
+    checkpoint = torch.load(resume_ckpt_path)
+    torch.save(checkpoint['model_state_dict'], save_ckpt_path)
+
+
+
+
+
 def CV2DrawBox(image, boxes, classes, scores, save_res_path, colors, class_names):
     '''OpenCV画框
         Args:
@@ -506,6 +521,10 @@ class TTA():
 
 # for test only
 if __name__ == '__main__':
-    json_dir = 'log/fpn_p2_VOC'
-    save_dir = './log/fpn_p2_VOC/plot'
-    visArgsHistory(json_dir, save_dir, loss_sample_interval=50)
+    # json_dir = 'log/fpn_p2_VOC'
+    # save_dir = './log/fpn_p2_VOC/plot'
+    # visArgsHistory(json_dir, save_dir, loss_sample_interval=50)
+
+    resume_ckpt_path = ''
+    save_ckpt_path = 'iter_5000.pt'
+    resumeCKPT2CKPT(resume_ckpt_path, save_ckpt_path)
